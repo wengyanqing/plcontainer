@@ -34,6 +34,20 @@ To configure PL/Container environment, you need to enable PL/Container for speci
    ```shell
    psql -d your_database -c 'create extension plcontainer;'
    ```
+   
+Configure the plcontainer runtime in configuration file, specify docker image etc. Here is an example
+```
+$PGDATA/plcontainer_configuration.xml
+
+<configuration>
+    <runtime>
+        <id>plc_python_shared</id>
+        <image>centos:7</image>
+                <command>/clientdir//pyclient.sh</command>
+        <shared_directory access="ro" container="/clientdir" host="/usr/local/pgsql/bin/plcontainer_clients"/>
+    </runtime>
+</configuration>
+```
 
 ### Unsupported feature
 There some features PLContainer doesn't support. For unsupported feature list and their corresponding issue, 
