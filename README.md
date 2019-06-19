@@ -6,6 +6,9 @@ implement sandboxing.
 
 The architecture of PL/Container is described at [PL/Container-Architecture](https://github.com/greenplum-db/plcontainer/wiki/PLContainer-Architecture)
 
+## About PL/Container for Postgres
+Please refer to branch [postgres](https://github.com/greenplum-db/plcontainer/tree/postgres)
+
 ### Requirements
 
 1. PL/Container runs on CentOS/RHEL 7.x or CentOS/RHEL 6.6+
