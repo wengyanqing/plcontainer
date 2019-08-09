@@ -36,13 +36,7 @@ interpreted as representing official policies, either expressed or implied, of t
 #include "comm_connectivity.h"
 #include "messages/messages.h"
 
-//#define PLCONTAINER_CHANNEL_DEBUG
-
-#ifdef PLCONTAINER_CHANNEL_DEBUG
-	#define channel_elog(...) plc_elog(__VA_ARGS__)
-#else
-	#define channel_elog(...)
-#endif
+#define channel_elog(...)  do{}while(0)
 
 int plcontainer_channel_send(plcConn *conn, plcMessage *msg);
 

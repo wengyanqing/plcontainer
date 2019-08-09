@@ -111,7 +111,7 @@ static ssize_t plcSocketSend(plcConn *conn, const void *ptr, size_t len) {
  * Returns 0 on success, -1 on failure
  */
 static int plcBufferMaybeFlush(plcConn *conn, bool isForse) {
-	plcBuffer *buf = conn->buffer[PLC_OUTPUT_BUFFER];
+	plcBuffer *buf = &conn->buffer[PLC_OUTPUT_BUFFER];
 
 	/*
 	 * Flush the buffer if it has less than PLC_BUFFER_MIN_FREE of free space
@@ -151,7 +151,7 @@ static int plcBufferMaybeFlush(plcConn *conn, bool isForse) {
  *
  */
 static void plcBufferMaybeReset(plcConn *conn, int bufType) {
-	plcBuffer *buf = conn->buffer[bufType];
+	plcBuffer *buf = &conn->buffer[bufType];
 
 	// If the buffer has no data we can reset both pointers to 0
 	if (buf->pStart == buf->pEnd) {
@@ -179,8 +179,10 @@ static void plcBufferMaybeReset(plcConn *conn, int bufType) {
  *
  * Returns 0 on success, -1 on failure
  */
+// TODO: alloc buffer memory in the transaction level memory context, instead of
+// TopMemoryContext
 static int plcBufferMaybeResize(plcConn *conn, int bufType, size_t bufAppend) {
-	plcBuffer *buf = conn->buffer[bufType];
+	plcBuffer *buf = &conn->buffer[bufType];
 	int dataSize;
 	int newSize;
 	char *newBuffer = NULL;
@@ -196,7 +198,7 @@ static int plcBufferMaybeResize(plcConn *conn, int bufType, size_t bufAppend) {
 		// Buffer size is twice as large as the data we need to hold, rounded
 		// to the nearest PLC_BUFFER_SIZE bytes
 		newSize = ((dataSize * 2) / PLC_BUFFER_SIZE + 1) * PLC_BUFFER_SIZE;
-		newBuffer = (char *) PLy_malloc(newSize);
+		newBuffer = (char *) palloc(newSize);
 		if (newBuffer == NULL) {
 			// shrink failed, should not be an error
 			plc_elog(WARNING, "plcBufferMaybeFlush: Cannot allocate %d bytes "
@@ -211,7 +213,7 @@ static int plcBufferMaybeResize(plcConn *conn, int bufType, size_t bufAppend) {
 	else if (buf->pEnd + (int) bufAppend > buf->bufSize - PLC_BUFFER_MIN_FREE) {
 		// Growing the buffer we need to just hold all the data we receive
 		newSize = (dataSize / PLC_BUFFER_SIZE + 1) * PLC_BUFFER_SIZE;
-		newBuffer = (char *) PLy_malloc(newSize);
+		newBuffer = (char *) palloc(newSize);
 		if (newBuffer == NULL) {
 			plc_elog(ERROR, "plcBufferMaybeGrow: Cannot allocate %d bytes for buffer",
 				    newSize);
@@ -244,7 +246,7 @@ static int plcBufferMaybeResize(plcConn *conn, int bufType, size_t bufAppend) {
  */
 int plcBufferAppend(plcConn *conn, char *srcBuffer, size_t nBytes) {
 	int res = 0;
-	plcBuffer *buf = conn->buffer[PLC_OUTPUT_BUFFER];
+	plcBuffer *buf = &conn->buffer[PLC_OUTPUT_BUFFER];
 
 	// If we don't have enough space in the buffer to hold the data
 	if (buf->bufSize - buf->pEnd < (int) nBytes) {
@@ -280,7 +282,7 @@ int plcBufferAppend(plcConn *conn, char *srcBuffer, size_t nBytes) {
  * Returns 0 on success, -1 if failed
  */
 int plcBufferRead(plcConn *conn, char *resBuffer, size_t nBytes) {
-	plcBuffer *buf = conn->buffer[PLC_INPUT_BUFFER];
+	plcBuffer *buf = &conn->buffer[PLC_INPUT_BUFFER];
 	int res = 0;
 
 	res = plcBufferReceive(conn, nBytes);
@@ -300,7 +302,7 @@ int plcBufferRead(plcConn *conn, char *resBuffer, size_t nBytes) {
  */
 int plcBufferReceive(plcConn *conn, size_t nBytes) {
 	int res = 0;
-	plcBuffer *buf = conn->buffer[PLC_INPUT_BUFFER];
+	plcBuffer *buf = &conn->buffer[PLC_INPUT_BUFFER];
 
 	// If we don't have enough data in the buffer already
 	if (buf->pEnd - buf->pStart < (int) nBytes) {
@@ -343,175 +345,273 @@ int plcBufferFlush(plcConn *conn) {
 	return plcBufferMaybeFlush(conn, true);
 }
 
+// assume buffer is all zero
+static void plcBufferInit(plcBuffer *buffer)
+{
+	buffer->data = palloc(PLC_BUFFER_SIZE);
+	buffer->bufSize = PLC_BUFFER_SIZE;
+}
 /*
  *  Initialize plcConn data structure and input/output buffers.
  *  For network connection, uds_fn means nothing.
  */
-plcConn *plcConnInit(int sock) {
-	plcConn *conn;
-
-	// Initializing main structures
-	conn = (plcConn *) PLy_malloc(sizeof(plcConn));
-	conn->buffer[PLC_INPUT_BUFFER] = (plcBuffer *) PLy_malloc(sizeof(plcBuffer));
-	conn->buffer[PLC_OUTPUT_BUFFER] = (plcBuffer *) PLy_malloc(sizeof(plcBuffer));
-
-	// Initializing buffers
-	conn->buffer[PLC_INPUT_BUFFER]->data = (char *) PLy_malloc(PLC_BUFFER_SIZE);
-	conn->buffer[PLC_INPUT_BUFFER]->bufSize = PLC_BUFFER_SIZE;
-	conn->buffer[PLC_INPUT_BUFFER]->pStart = 0;
-	conn->buffer[PLC_INPUT_BUFFER]->pEnd = 0;
-	conn->buffer[PLC_OUTPUT_BUFFER]->data = (char *) PLy_malloc(PLC_BUFFER_SIZE);
-	conn->buffer[PLC_OUTPUT_BUFFER]->bufSize = PLC_BUFFER_SIZE;
-	conn->buffer[PLC_OUTPUT_BUFFER]->pStart = 0;
-	conn->buffer[PLC_OUTPUT_BUFFER]->pEnd = 0;
+void plcConnInit(plcConn *conn) {
+	memset(conn, 0, sizeof(*conn));
+	plcBufferInit(&conn->buffer[PLC_INPUT_BUFFER]);
+	plcBufferInit(&conn->buffer[PLC_OUTPUT_BUFFER]);
 
 	// Initializing control parameters
-	conn->sock = sock;
+	conn->sock = -1;
+}
+void plcContextInit(plcContext *ctx)
+{
+	// TODO: init
+	plcConnInit((plcConn*)ctx);
+	init_pplan_slots(ctx);
+	ctx->uds_fn = NULL;
+}
+static int ListenTCP(const char *network, const char *address)
+{
+    if (!network || !address) {
+        plc_elog(ERROR, "invalid parameters: network(%s), address(%s)",
+                network, address);
+        return -1;
+    }
+    char node_service[600], *node, *service;
+    struct addrinfo hints;
+    struct addrinfo *result, *rp;
+    int rc, fd=-1;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE | AI_V4MAPPED;
+    if (strcmp(network, "tcp") == 0) {
+        hints.ai_family = AF_UNSPEC;
+    } else if (strcmp(network, "tcp4") == 0) {
+        hints.ai_family = AF_INET;
+    } else if (strcmp(network, "tcp6") == 0) {
+        hints.ai_family = AF_INET6;
+    } else {
+        plc_elog(ERROR, "invalid network:%s\n", network);
+        return -1;
+    }
+    service = split_address(address, node_service);
+    if (!service) {
+        plc_elog(ERROR, "bad address(%s)\n", address);
+        return -1;
+    }
+    node = node_service[0]=='\0' ? NULL : node_service;
 
-	return conn;
+    rc = getaddrinfo(node, service, &hints, &result);
+    if (rc != 0) {
+        plc_elog(ERROR, "getaddrinfo: %s\n", gai_strerror(rc));
+        return -1;
+    }
+
+    for (rp = result; rp != NULL; rp = rp->ai_next) {
+        fd = socket(rp->ai_family, rp->ai_socktype,
+                    rp->ai_protocol);
+        if (fd == -1)
+            continue;
+
+        if (bind(fd, rp->ai_addr, rp->ai_addrlen) == 0) {
+            if (listen(fd, 128) == 0)
+                break;
+        }
+        close(fd);
+    }
+
+    freeaddrinfo(result);           /* No longer needed */
+    return fd;
+}
+int ListenUnix(const char *network, const char *address)
+{
+    int fd, sotype;
+    struct sockaddr_un sockaddr;
+    if (!network || !address) {
+        plc_elog(ERROR, "null parameters: network(%s), address(%s)", network, address);
+        return -1;
+    }
+    if (strcmp(network, "unix") == 0)
+        sotype = SOCK_STREAM;
+    else if (strcmp(network, "unixpacket") == 0)
+        sotype = SOCK_SEQPACKET;
+//    else if (strcmp(network, "unixgram") == 0)
+//        socktype = SOCK_DGRAM;
+    else {
+        plc_elog(ERROR, "unknown network(%s)", network);
+        return -1;
+    }
+    if (strlen(address) >= sizeof(sockaddr.sun_path)) {
+        plc_elog(ERROR, "address is too long(%d)", strlen(address));
+        return -1;
+    }
+    fd = socket(AF_UNIX, sotype, 0);
+    if (fd == -1) {
+        plc_elog(ERROR, "socket failed(%s)", strerror(errno));
+        return -1;
+    }
+    memset(&sockaddr, 0, sizeof(sockaddr));
+    sockaddr.sun_family = AF_UNIX;
+    strcpy(sockaddr.sun_path, address);
+    if (bind(fd, (const struct sockaddr*)&sockaddr, (socklen_t) sizeof(sockaddr)) == -1) {
+        plc_elog(ERROR, "bind error(%s)", strerror(errno));
+        goto out;
+    }
+    if (listen(fd, 128) == -1) {
+        plc_elog(ERROR, "listen error(%s)", strerror(errno));
+        goto out;
+    }
+    return fd;
+
+out:
+    close(fd);
+    return -1;
+}
+int plcListenServer(const char *network, const char *address)
+{
+	if (!network) {
+        plc_elog(ERROR, "null network");
+        return -1;
+    }
+    switch(network[0]) {
+        case 't': return ListenTCP(network, address);
+        case 'u': return ListenUnix(network, address);
+        default:
+            break;
+    }
+    return -1;
+}
+static int DialTCP(const char *network, const char *address)
+{
+    char node_service[600], *node, *service;
+    struct addrinfo hints;
+    struct addrinfo *result, *rp;
+    int fd, rc;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_V4MAPPED;
+    if (strcmp(network, "tcp") == 0) {
+        hints.ai_family = AF_UNSPEC;
+    } else if (strcmp(network, "tcp4") == 0) {
+        hints.ai_family = AF_INET;
+    } else if (strcmp(network, "tcp6") == 0) {
+        hints.ai_family = AF_INET6;
+    } else {
+        plc_elog(ERROR, "invalid network:%s\n", network);
+        return -1;
+    }
+    service = split_address(address, node_service);
+    if (!service) {
+        plc_elog(ERROR, "bad address(%s)\n", address);
+        return -1;
+    }
+    node = node_service[0]=='\0' ? NULL : node_service;
+
+    rc = getaddrinfo(node, service, &hints, &result);
+    if (rc != 0) {
+        plc_elog(ERROR, "getaddrinfo: %s\n", gai_strerror(rc));
+        return -1;
+    }
+    fd = -1;
+    for (rp = result; rp != NULL; rp = rp->ai_next) {
+        fd = socket(rp->ai_family, rp->ai_socktype,
+                     rp->ai_protocol);
+        if (fd == -1)
+            continue;
+
+        if (connect(fd, rp->ai_addr, rp->ai_addrlen) == 0)
+            break;                  /* Success */
+
+        close(fd);
+    }
+    freeaddrinfo(result);           /* No longer needed */
+
+    if (rp == NULL) {               /* No address succeeded */
+        plc_elog(ERROR, "Could not bind(%s)\n", strerror(errno));
+        return -1;
+    }
+
+    return fd;
 }
 
-#ifndef PLC_CLIENT
+static int DialUnix(const char *network, const char *address)
+{
+    struct sockaddr_un sockaddr;
+    int fd, sotype;
+    socklen_t socklen;
+    if (!network || !address) {
+        plc_elog(ERROR, "null network or address");
+        return -1;
+    }
+    if (strcmp(network, "unix")==0)
+        sotype = SOCK_STREAM;
+    else if (strcmp(network, "unixgram")==0)
+        sotype = SOCK_DGRAM;
+    else if (strcmp(network, "unixpacket")==0)
+        sotype = SOCK_SEQPACKET;
+    else {
+        plc_elog(ERROR, "unknown network for unix-socket(%s)", network);
+        return -1;
+    }
+    if (strlen(address) >= sizeof(sockaddr.sun_path)) {
+        plc_elog(ERROR, "address(%s) is too long(%d)", address, strlen(address));
+        return -1;
+    }
+    fd = socket(AF_UNIX, sotype, 0);
+    if (fd == -1) {
+        plc_elog(ERROR, "socket failed:%s", strerror(errno));
+        return -1;
+    }
 
-/* A bit ugly. Maybe move pplan stuffs out of conn* later. */
-extern void init_pplan_slots(plcConn *conn);
+    memset(&sockaddr, 0, sizeof(sockaddr));
+    sockaddr.sun_family = AF_UNIX;
+    strcpy(sockaddr.sun_path, address);
+    socklen = sizeof(sockaddr);
+    if (connect(fd, (const struct sockaddr*)&sockaddr, socklen)) {
+        plc_elog(ERROR, "connect error(%s)", strerror(errno));
+        goto out;
+    }
+    return fd;
 
-extern void deinit_pplan_slots(plcConn *conn);
-
-/*
- *  Connect to the specified host of the localhost and initialize the plcConn
- *  data structure
- */
-plcConn *plcConnect_inet(int port) {
-	struct hostent *server;
-	struct sockaddr_in raddr; /** Remote address */
-	plcConn *result = NULL;
-	struct timeval tv;
-
-	int sock = socket(AF_INET, SOCK_STREAM, 0);
-	if (sock < 0) {
-		plc_elog(ERROR, "PLContainer: Cannot create socket: %s", strerror(errno));
-		goto err_out1;
-	}
-
-	server = gethostbyname("localhost");
-	if (server == NULL) {
-		close(sock);
-		plc_elog(ERROR, "PLContainer: Failed to call gethostbyname('localhost'):"
-			" %s", hstrerror(h_errno));
-		return NULL;
-	}
-
-	raddr.sin_family = AF_INET;
-	memcpy(&((raddr).sin_addr.s_addr), (char *) server->h_addr_list[0],
-	       server->h_length);
-
-	raddr.sin_port = htons(port);
-	if (connect(sock, (const struct sockaddr *) &raddr,
-	            sizeof(raddr)) < 0) {
-		char ipAddr[INET_ADDRSTRLEN];
-		inet_ntop(AF_INET, &(raddr.sin_addr), ipAddr, INET_ADDRSTRLEN);
-		plc_elog(DEBUG1, "PLContainer: Failed to connect to %s: %s", ipAddr,
-			    strerror(errno));
-		goto err_out2;
-	}
-
-	/* FIXME: Do we need them? */
-	/* Set socket receive timeout to 500ms */
-	tv.tv_sec = 0;
-	tv.tv_usec = 500000;
-	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *) &tv, sizeof(struct timeval));
-
-	result = plcConnInit(sock);
-	init_pplan_slots(result);
-	result->uds_fn = NULL;
-
-	return result;
-
-err_out2:
-	close(sock);
-err_out1:
-	return NULL;
+out:
+    close(fd);
+    return -1;
 }
 
-/*
- *  Connect to the specified host of the localhost and initialize the plcConn
- *  data structure
- */
-plcConn *plcConnect_ipc(char *uds_fn) {
-	plcConn *result = NULL;
-	struct timeval tv;
-	int sock;
-	struct sockaddr_un raddr;
+// FIXME: is there necessary to set a timeout for plcontainer/container ???
+int plcDialToServer(const char *network, const char *address)
+{
 
-	if (strlen(uds_fn) >= sizeof(raddr.sun_path)) {
-		plc_elog(ERROR, "PLContainer: The path for unix domain socket "
-			"connection is too long: %s", uds_fn);
-		return NULL;
-	}
-
-	sock = socket(AF_UNIX, SOCK_STREAM, 0);
-	if (sock < 0) {
-		plc_elog(ERROR, "PLContainer: Cannot create unix domain socket: %s",
-			    strerror(errno));
-		return NULL;
-	}
-
-	memset(&raddr, 0, sizeof(raddr));
-
-	raddr.sun_family = AF_UNIX;
-	strcpy(raddr.sun_path, uds_fn);
-
-	if (connect(sock, (const struct sockaddr *) &raddr,
-	            sizeof(raddr)) < 0) {
-		plc_elog(DEBUG1, "PLContainer: Failed to connect to %s: %s",
-			    uds_fn, strerror(errno));
-		goto err_out;
-	}
-
-	/* Set socket receive timeout to 500ms */
-	tv.tv_sec = 0;
-	tv.tv_usec = 500000;
-	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *) &tv, sizeof(struct timeval));
-
-	result = plcConnInit(sock);
-	init_pplan_slots(result);
-	result->uds_fn = plc_top_strdup(uds_fn);
-
-	return result;
-
-err_out:
-	close(sock);
-	return NULL;
+    if (!network)
+        return -1;
+    switch(network[0]) {
+        case 't': return DialTCP(network, address);
+        case 'u': return DialUnix(network, address);
+        default:
+            break;
+    }
+    return -1;
 }
 
 /*
  *  Close the plcConn connection and deallocate the buffers
  */
-void plcDisconnect(plcConn *conn) {
+void plcDisconnect(plcContext *ctx) {
 	char *uds_fn;
 
-	if (conn != NULL) {
-		close(conn->sock);
+	if (!ctx) 
+		return;
+		
+	close(ctx->sock);
 
-		uds_fn = conn->uds_fn;
-		if (uds_fn != NULL) {
-			unlink(uds_fn);
-			rmdir(dirname(uds_fn));
-			pfree(uds_fn);
-			conn->uds_fn = NULL;
-		}
-
-		pfree(conn->buffer[PLC_INPUT_BUFFER]->data);
-		pfree(conn->buffer[PLC_OUTPUT_BUFFER]->data);
-		pfree(conn->buffer[PLC_INPUT_BUFFER]);
-		pfree(conn->buffer[PLC_OUTPUT_BUFFER]);
-		conn->buffer[PLC_INPUT_BUFFER] = NULL;
-		conn->buffer[PLC_OUTPUT_BUFFER] = NULL;
-		deinit_pplan_slots(conn);
-		pfree(conn);
+	uds_fn = ctx->uds_fn;
+	if (uds_fn != NULL) {
+		pfree(uds_fn);
+		ctx->uds_fn = NULL;
 	}
-	return;
-}
 
-#endif
+	pfree(ctx->buffer[PLC_INPUT_BUFFER].data);
+	pfree(ctx->buffer[PLC_OUTPUT_BUFFER].data);
+	deinit_pplan_slots(ctx);
+	pfree(ctx);
+}

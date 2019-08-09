@@ -34,9 +34,9 @@ static plcMsgResult *create_sql_result(bool isSelect);
 
 static plcMsgRaw *create_prepare_result(int64 pplan, plcDatatype *type, int nargs);
 
-void deinit_pplan_slots(plcConn *conn);
+void deinit_pplan_slots(plcContext *conn);
 
-void init_pplan_slots(plcConn *conn);
+void init_pplan_slots(plcContext *conn);
 
 static plcMsgResult *create_sql_result(bool isSelect) {
 	plcMsgResult *result;
@@ -139,7 +139,7 @@ static plcMsgRaw *create_unprepare_result(int32 retval) {
 	return result;
 }
 
-static int search_pplan(plcConn *conn, int64 pplan) {
+static int search_pplan(plcContext *conn, int64 pplan) {
 	int i;
 	struct pplan_slots *pplans;
 
@@ -156,7 +156,7 @@ static int search_pplan(plcConn *conn, int64 pplan) {
 	return -1;
 }
 
-static int insert_pplan(plcConn *conn, int64 pplan) {
+static int insert_pplan(plcContext *conn, int64 pplan) {
 	int slot;
 	struct pplan_slots *pplans;
 
@@ -176,7 +176,7 @@ static int insert_pplan(plcConn *conn, int64 pplan) {
 	return slot;
 }
 
-static int delete_pplan(plcConn *conn, int64 pplan) {
+static int delete_pplan(plcContext *conn, int64 pplan) {
 	int slot;
 	struct pplan_slots *pplans;
 
@@ -194,7 +194,7 @@ static int delete_pplan(plcConn *conn, int64 pplan) {
 	return slot;
 }
 
-static int free_plc_plan(plcConn *conn, int64 pplan) {
+static int free_plc_plan(plcContext *conn, int64 pplan) {
 	plcPlan *plc_plan;
 	int retval;
 
@@ -212,7 +212,7 @@ static int free_plc_plan(plcConn *conn, int64 pplan) {
 	return retval;
 }
 
-void deinit_pplan_slots(plcConn *conn) {
+void deinit_pplan_slots(plcContext *conn) {
 	int i;
 	struct pplan_slots *pplans = conn->pplans;
 	int64 pplan;
@@ -223,7 +223,7 @@ void deinit_pplan_slots(plcConn *conn) {
 	}
 }
 
-void init_pplan_slots(plcConn *conn) {
+void init_pplan_slots(plcContext *conn) {
 	int i;
 	struct pplan_slots *pplans = conn->pplans;
 
@@ -240,7 +240,7 @@ void init_pplan_slots(plcConn *conn) {
 }
 
 
-plcMessage *handle_sql_message(plcMsgSQL *msg, plcConn *conn, plcProcInfo *pinfo) {
+plcMessage *handle_sql_message(plcMsgSQL *msg, plcContext *conn, plcProcInfo *pinfo) {
 	int i, retval;
 	plcMessage *result = NULL;
 	SPIPlanPtr tmpplan;

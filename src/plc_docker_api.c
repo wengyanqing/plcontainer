@@ -30,13 +30,9 @@
 static char *plc_docker_socket = "/var/run/docker.sock";
 
 // URL prefix specifies Docker API version
-#ifdef DOCKER_API_LOW
-static char *plc_docker_url_prefix = "http:/v1.19";
-static char *default_log_dirver = "syslog";
-#else
 static char *plc_docker_url_prefix = "http:/v1.27";
 static char *default_log_dirver = "journald";
-#endif
+
 
 /* Static functions of the Docker API module */
 static plcCurlBuffer *plcCurlBufferInit();

@@ -5,7 +5,6 @@
  *
  *------------------------------------------------------------------------------
  */
-#ifdef PLC_CLIENT
 
 #include <errno.h>
 #include <netinet/ip.h>
@@ -28,72 +27,28 @@
  * Function binds the socket and starts listening on it: tcp
  */
 static int start_listener_inet() {
-	struct sockaddr_in addr;
-	int sock;
-
-	/* FIXME: We might want to downgrade from root to normal user in container.*/
-
-	sock = socket(AF_INET, SOCK_STREAM, 0);
-	if (sock == -1) {
-		plc_elog(ERROR, "system call socket() fails: %s", strerror(errno));
-	}
-
-	addr = (struct sockaddr_in) {
-		.sin_family = AF_INET,
-		.sin_port   = htons(SERVER_PORT),
-		.sin_addr = {.s_addr = INADDR_ANY},
-	};
-	if (bind(sock, (const struct sockaddr *) &addr, sizeof(addr)) == -1) {
-		plc_elog(ERROR, "Cannot bind the port: %s", strerror(errno));
-	}
-
-	if (listen(sock, 10) == -1) {
-		plc_elog(ERROR, "Cannot listen the socket: %s", strerror(errno));
-	}
-
-	plc_elog(DEBUG1, "Listening via network with port: %d", SERVER_PORT);
-
-	return sock;
+	char address[32];
+	snprintf(addr, sizeof(address), ":%u", SERVER_PORT);
+	return plcListenServer("tcp", address);
 }
 
 /*
  * Function binds the socket and starts listening on it: unix domain socket.
  */
 static int start_listener_ipc() {
-	struct sockaddr_un addr;
 	int sock;
-	char *uds_fn;
-	int sz;
+	char uds_fn[600];
 	char *env_str, *endptr;
 	uid_t qe_uid;
 	gid_t qe_gid;
 	long val;
 
 	/* filename: IPC_CLIENT_DIR + '/' + UDS_SHARED_FILE */
-	sz = strlen(IPC_CLIENT_DIR) + 1 + MAX_SHARED_FILE_SZ + 1;
-	uds_fn = pmalloc(sz);
-	sprintf(uds_fn, "%s/%s", IPC_CLIENT_DIR, UDS_SHARED_FILE);
-	if (strlen(uds_fn) >= sizeof(addr.sun_path)) {
-		plc_elog(ERROR, "PLContainer: The path for unix domain socket "
-			"connection is too long: %s", uds_fn);
-	}
-
-	sock = socket(AF_UNIX, SOCK_STREAM, 0);
+	snprintf(uds_fn, sizeof(uds_fn), "%s/%s", IPC_CLIENT_DIR, UDS_SHARED_FILE);
+	unlink(uds_fn);
+	sock = plcListenServer("unix", uds_fn);
 	if (sock == -1) {
 		plc_elog(ERROR, "system call socket() fails: %s", strerror(errno));
-	}
-
-	memset(&addr, 0, sizeof(addr));
-	addr.sun_family = AF_UNIX;
-	strcpy(addr.sun_path, uds_fn);
-
-	unlink(uds_fn);
-	if (access(uds_fn, F_OK) == 0)
-		plc_elog (ERROR, "Cannot delete the file for unix domain socket "
-			"connection: %s", uds_fn);
-
-	if (bind(sock, (const struct sockaddr *) &addr, sizeof(addr)) == -1) {
-		plc_elog(ERROR, "Cannot bind the addr: %s", strerror(errno));
 	}
 
 	/*
@@ -137,11 +92,6 @@ static int start_listener_ipc() {
 	if (chmod(uds_fn, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH) < 0) /* 0666*/
 		plc_elog (ERROR, "Could not set permission for file %s: %s",
 			         uds_fn, strerror(errno));
-
-	if (listen(sock, 10) == -1) {
-		plc_elog(ERROR, "Cannot listen the socket: %s", strerror(errno));
-	}
-
 	/*
 	 * Set passed UID from OS is currently disabled due to the container OS may different with host OS.
 	 * Hence use passed CLIENT_UID may has some risks.
@@ -151,7 +101,7 @@ static int start_listener_ipc() {
 
 	return sock;
 }
-
+// TODO: clean code
 int start_listener() {
 	int sock;
 	char *use_container_network;
@@ -292,4 +242,3 @@ void receive_loop(void (*handle_call)(plcMsgCallreq *, plcConn *), plcConn *conn
 	}
 }
 
-#endif

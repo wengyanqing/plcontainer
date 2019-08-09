@@ -13,6 +13,7 @@
 #include "utils/memutils.h"
 #include "utils/palloc.h"
 
+// TODO: rename PLy_malloc to a more meaningful name
 void *PLy_malloc(size_t bytes) {
 	/* We need our allocations to be long-lived, so use TopMemoryContext */
 	return MemoryContextAlloc(TopMemoryContext, bytes);
@@ -66,7 +67,7 @@ is_write_log(int elevel, int log_min_level)
 	return 0;
 }
 
-void *pmalloc(size_t size) {
+void *palloc(size_t size) {
 	void *addr = malloc(size);
 	if (addr == NULL)
 		plc_elog(ERROR, "Fail to allocate %ld bytes", (unsigned long) size);

@@ -493,7 +493,7 @@ static void plcontainer_process_quote(plcMsgQuote *msg, plcConn *conn) {
 /*
  * Processing client SQL query message
  */
-static void plcontainer_process_sql(plcMsgSQL *msg, plcConn *conn, plcProcInfo *proc) {
+static void plcontainer_process_sql(plcMsgSQL *msg, plcContext *conn, plcProcInfo *proc) {
 	plcMessage *res;
 	volatile MemoryContext oldcontext;
 	volatile ResourceOwner oldowner;

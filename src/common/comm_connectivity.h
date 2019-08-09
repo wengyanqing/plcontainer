@@ -24,42 +24,60 @@ typedef struct plcBuffer {
 	int bufSize;
 } plcBuffer;
 
-#ifndef PLC_CLIENT
 #define MAX_PPLAN 32 /* Max number of pplan saved in one connection. */
 struct pplan_slots {
 	int64 pplan;
 	int next;
 };
-#endif
 
 typedef struct plcConn {
 	int sock;
 	int rx_timeout_sec;
-	plcBuffer *buffer[2];
-#ifndef PLC_CLIENT
+	plcBuffer buffer[2];
+// #ifndef PLC_CLIENT
+	// char *uds_fn; /* File for unix domain socket connection only. */
+	// int container_slot;
+	// int head_free_pplan_slot;  /* free list of spi pplan slot */
+	// struct pplan_slots pplans[MAX_PPLAN]; /* for spi plannning */
+// #endif
+} plcConn;
+
+typedef struct plcContext
+{
+	plcConn conn;
 	char *uds_fn; /* File for unix domain socket connection only. */
-	int container_slot;
+	// int container_slot;
 	int head_free_pplan_slot;  /* free list of spi pplan slot */
 	struct pplan_slots pplans[MAX_PPLAN]; /* for spi plannning */
-#endif
-} plcConn;
+}plcContext;
+
 
 #define UDS_SHARED_FILE "unix.domain.socket.shared.file"
 #define IPC_CLIENT_DIR "/tmp/plcontainer"
 #define IPC_GPDB_BASE_DIR "/tmp/plcontainer"
 #define MAX_SHARED_FILE_SZ strlen(UDS_SHARED_FILE)
 
-#ifndef PLC_CLIENT
+// #ifndef PLC_CLIENT
+// 
+// plcConn initialized with invalid socket fd(connecting to container)
+// socket connecting to the coordinator is one-time fd.
+// plcConn *plcConnect_inet(int port);
+// 
+// plcConn *plcConnect_ipc(char *uds_fn);
+// 
+// void plcDisconnect(plcConn *conn);
+// 
+// #endif
+// return socket file descriptor, or -1 if failed
+// network : unix
+int plcListenServer(const char *network, const char *service_address);
+int plcDialToServer(const char *network, const char *server_address);
+// separator initialization of plcConn/plcContext with socket fd
+void plcContextInit(plcContext *ctx);
+void plcConnInit(plcConn *conn);
+void plcDisconnect(plcContext *ctx);
 
-plcConn *plcConnect_inet(int port);
-
-plcConn *plcConnect_ipc(char *uds_fn);
-
-void plcDisconnect(plcConn *conn);
-
-#endif
-
-plcConn *plcConnInit(int sock);
+// plcConn *plcConnInit(int sock);
 
 int plcBufferAppend(plcConn *conn, char *prt, size_t len);
 

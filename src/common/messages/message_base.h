@@ -10,6 +10,7 @@
 
 #include "../comm_utils.h"
 
+// TODO: change message type to one byte
 #define base_message_content unsigned short msgtype;
 
 typedef struct plcMessage {

@@ -107,7 +107,7 @@ extern int is_write_log(int elevel, int log_min_level);
             }                                                           \
         } while (0)
 
-void *pmalloc(size_t size);
+void *palloc(size_t size);
 
 #define PLy_malloc pmalloc
 #define pfree free
@@ -122,22 +122,8 @@ int sanity_check_client(void);
 
 #include "postgres.h"
 
-#ifdef PLC_PG
-#define write_log printf
-#endif
-
-/* QE process uses elog, while cleanup process should use write_log*/
-#define backend_log(elevel, ...)  \
-	do { \
-		if (getppid() == PostmasterPid) { \
-			plc_elog(elevel, __VA_ARGS__); \
-		} else { \
-			write_log(__VA_ARGS__); \
-		} \
-	} while(0)
 
 #define plc_elog(lvl, fmt, ...) elog(lvl, "plcontainer: " fmt, ##__VA_ARGS__);
-#define pmalloc palloc
 
 /* pfree & pstrdup are already defined by postgres */
 void *PLy_malloc(size_t bytes);
