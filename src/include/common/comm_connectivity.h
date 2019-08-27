@@ -8,9 +8,8 @@
 #ifndef PLC_COMM_CONNECTIVITY_H
 #define PLC_COMM_CONNECTIVITY_H
 
-#include <stddef.h>
 
-#include "comm_utils.h"
+#include "misc.h"
 
 #define PLC_BUFFER_SIZE 8192
 #define PLC_BUFFER_MIN_FREE 200
@@ -26,7 +25,7 @@ typedef struct plcBuffer {
 
 #define MAX_PPLAN 32 /* Max number of pplan saved in one connection. */
 struct pplan_slots {
-	int64 pplan;
+	int64_t pplan;
 	int next;
 };
 

@@ -5,20 +5,19 @@
  *
  *------------------------------------------------------------------------------
  */
-#ifndef PLC_COMM_SERVER_H
-#define PLC_COMM_SERVER_H
+#ifndef PLC_SERVER_MISC_H
+#define PLC_SERVER_MISC_H
 
-#include "comm_connectivity.h"
-
-// Enabling debug would create infinite loop of client receiving connections
-//#define _DEBUG_SERVER
-
-#define SERVER_PORT 8080
-
-// Timeout in seconds for server to wait for client connection
-#define TIMEOUT_SEC 20
-
-
+#include <stddef.h>
+#include <stdio.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <signal.h>
+#include <errno.h>
+#include <execinfo.h>
 /* Compatibility with R that defines WARNING and ERROR by itself */
 #undef WARNING
 #undef ERROR
@@ -39,31 +38,19 @@
 #define PANIC      22
 /* End of extraction from utils/elog.h */
 
-/* Postgres-specific types from GPDB c.h header */
-typedef signed char int8;        /* == 8 bits */
-typedef signed short int16;      /* == 16 bits */
-typedef signed int int32;        /* == 32 bits */
-typedef unsigned int uint32;     /* == 32 bits */
-typedef long long int int64;     /* == 64 bits */
-#define INT64_FORMAT "%lld"
-typedef float float4;
-typedef double float8;
-typedef char bool;
-#define true    ((bool) 1)
-#define false   ((bool) 0)
-/* End of extraction from c.h */
+// Global log level for server
+int server_log_level;
 
 extern int is_write_log(int elevel, int log_min_level);
 
-#define plc_elog(lvl, fmt, ...)                                          \
+#define plc_elog(lvl, fmt, ...)                                         \
         do {                                                            \
             FILE *out = stdout;                                         \
             if (lvl >= ERROR) {                                         \
                 out = stderr;                                           \
             }                                                           \
-            if (is_write_log(lvl, client_log_level)) {              \
-              fprintf(out, "plcontainer log: %s, ", clientLanguage);    \
-              fprintf(out, "%s, %s, %d, ", dbUsername, dbName, dbQePid);\
+            if (is_write_log(lvl, server_log_level)) {                  \
+              fprintf(out, "plcontainer log: ");                        \
               fprintf(out, #lvl ": ");                                  \
               fprintf(out, fmt, ##__VA_ARGS__);                         \
               fprintf(out, "\n");                                       \
@@ -81,16 +68,5 @@ void *palloc(size_t size);
 #define pstrdup strdup
 #define plc_top_strdup strdup
 
-void set_signal_handlers(void);
+#endif /* PLC_SERVER_MISC_H */
 
-int sanity_check_client(void);
-
-int start_listener(void);
-
-void connection_wait(int sock);
-
-plcConn *connection_init(int sock);
-
-void receive_loop(void (*handle_call)(plcMsgCallreq *, plcConn *), plcConn *conn);
-
-#endif /* PLC_COMM_SERVER_H */

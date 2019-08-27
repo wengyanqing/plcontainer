@@ -30,9 +30,9 @@ interpreted as representing official policies, either expressed or implied, of t
  * Portions Copyright © 2016-Present Pivotal Software, Inc.
  */
 
-#include <stdlib.h>
+#include "misc.h"
 
-#include "comm_utils.h"
+
 #include "messages/messages.h"
 
 /* Recursive function to free up the type structure */
@@ -93,7 +93,7 @@ void free_callreq(plcMsgCallreq *req, bool isShared, bool isSender) {
 }
 
 void free_result(plcMsgResult *res, bool isSender) {
-	uint32 i, j;
+	uint32_t i, j;
 
 	/* free the data array */
 	if (res->data != NULL) {
