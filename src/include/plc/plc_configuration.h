@@ -10,6 +10,7 @@
 #define PLC_CONFIGURATION_H
 
 #include "fmgr.h"
+#include "utils/hsearch.h"
 #include <json-c/json.h>
 #include "plc/plcontainer.h"
 
@@ -63,10 +64,14 @@ Datum show_plcontainer_config(PG_FUNCTION_ARGS);
 
 runtimeConfEntry *plc_get_runtime_configuration(char *id);
 
+HTAB *load_runtime_configuration(void);
+
 bool plc_check_user_privilege(char *users);
+
 int plc_refresh_container_config(bool verbose);
 
-
 char *get_sharing_options(runtimeConfEntry *conf, int container_slot, bool *has_error, char **uds_dir);
+
+extern HTAB *runtime_conf_table;
 
 #endif /* PLC_CONFIGURATION_H */

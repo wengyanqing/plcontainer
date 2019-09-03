@@ -7,7 +7,6 @@
 
 #include "postgres.h"
 #include <unistd.h>
-#include <utils/timeout.h>
 
 #include "access/tupdesc.h"
 #include "access/xact.h"
@@ -17,7 +16,6 @@
 #include "catalog/pg_database.h"
 #include "catalog/pg_extension.h"
 #include "catalog/pg_type.h"
-#include "cdb/cdbvars.h"
 #include "commands/dbcommands.h"
 #include "commands/extension.h"
 #include "executor/spi.h"
@@ -41,7 +39,8 @@
 #include "utils/syscache.h"
 
 #include "common/base_network.h"
-#include "plc_coordinator.h"
+#include "plc/plc_configuration.h"
+#include "plc/plc_coordinator.h"
 
 PG_MODULE_MAGIC;
 // PROTOTYPE:
@@ -97,7 +96,7 @@ plc_listen_socket()
     snprintf(address, sizeof(address), "/tmp/.plcoordinator.%ld.unix.sock", (long)getpid());
     sock = plcListenServer("unix", address);
     if (sock < 0) {
-        elog(ERROR, "initialize socket failed");
+        plc_elog(ERROR, "initialize socket failed");
     }
     coordinator_shm->protocol = CO_PROTO_UNIX;
     strcpy(coordinator_shm->address, address);
@@ -117,6 +116,15 @@ plc_initialize_coordinator()
     int sock;
 
     sock = plc_listen_socket();
+
+    if (plc_refresh_container_config(false) != 0) {
+        if (runtime_conf_table == NULL) {
+            /* can't load runtime configuration */
+            plc_elog(ERROR, "PL/container: can't load runtime configuration");
+        } else {
+            plc_elog(WARNING, "PL/container: there is no runtime configuration");
+        }
+    }
 
     memset(&auxWorker, 0, sizeof(auxWorker));
     auxWorker.bgw_flags = BGWORKER_SHMEM_ACCESS;
@@ -141,7 +149,7 @@ plc_coordinator_main(Datum datum)
     BackgroundWorkerUnblockSignals();
 
     coordinator_shm->state = CO_STATE_READY;
-    elog(INFO, "plcoordinator is going to enter main loop, sock=%d", sock);
+    plc_elog(INFO, "plcoordinator is going to enter main loop, sock=%d", sock);
     while(!got_sigterm) {
         /* TODO: add network code */
 
@@ -203,5 +211,5 @@ _PG_init(void)
     snprintf(worker.bgw_name, BGW_MAXLEN, "[plcontainer] - coordinator");
 
     RegisterBackgroundWorker(&worker);
-    elog(NOTICE, "init plc_coordinator %d done", (int)getpid());
+    plc_elog(NOTICE, "init plc_coordinator %d done", (int)getpid());
 }
