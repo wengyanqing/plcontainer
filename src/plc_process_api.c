@@ -47,9 +47,15 @@ int plc_process_create_container(runtimeConfEntry *conf, char **name, int contai
     if ((pid = fork()) == -1) {
         res = -1;
     } else if (pid == 0) {
-        char *binaryPath = "/home/gpadmin/workspace/tools/gpdbmaster/bin/plcontainer_clients/pyclient";
-        char uid_string[1024];
-        char gid_string[1024];
+        char *env_str;
+        char binaryPath[1024] = {0};
+        if ((env_str = getenv("GPHOME")) == NULL) {
+            plc_elog (ERROR, "GPHOME is not set");
+        } else {
+            sprintf(binaryPath, "%s/bin/plcontainer_clients/pyclient", env_str);
+        }
+        char uid_string[1024] = {0};
+        char gid_string[1024] = {0};
         sprintf(uid_string, "EXECUTOR_UID=%d", getuid());
         sprintf(gid_string, "EXECUTOR_GID=%d", getgid());
         char *const env[] = {
