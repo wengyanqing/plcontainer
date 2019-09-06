@@ -37,6 +37,7 @@
 #include "plc_typeio.h"
 #include "sqlhandler.h"
 #include "subtransaction_handler.h"
+#include "plc_backend_api.h"
 
 #ifdef PG_MODULE_MAGIC
 
@@ -90,6 +91,9 @@ static plcProcInfo *PLy_curr_procedure = NULL;
 /* this is saved and restored by plcontainer_call_handler */
 MemoryContext pl_container_caller_context = NULL;
 
+static void plcontainer_backend_type_assign_hook(const char *newvalue, void *extra);
+char *plc_backend_type_string = NULL;
+
 void _PG_init(void);
 
 static void
@@ -97,6 +101,18 @@ plcontainer_cleanup(pg_attribute_unused() int code, pg_attribute_unused() Datum 
 	delete_containers();
 }
 
+static void 
+plcontainer_backend_type_assign_hook(const char *newvalue, void *extra) {
+    (void)(extra);
+    enum PLC_BACKEND_TYPE type = UNIMPLEMENT_TYPE;
+    if (strcmp(newvalue, "docker") == 0) {
+        type = BACKEND_DOCKER;
+    } else if (strcmp(newvalue, "process") == 0) {
+        type = BACKEND_PROCESS;
+    }
+    plc_backend_prepareImplementation(type);
+}
+    
 /*
  * _PG_init() - library load-time initialization
  *
@@ -108,6 +124,16 @@ _PG_init(void) {
 	static bool inited = false;
 	if (inited)
 		return;
+
+    DefineCustomStringVariable("plcontainer.backend_type",
+                                gettext_noop("plcontainer backend type (docker|process)."),
+                                NULL,
+                                &plc_backend_type_string,
+                                "docker",
+                                PGC_USERSET, 0,
+                                NULL,
+                                plcontainer_backend_type_assign_hook,
+                                NULL);
 
 	on_proc_exit(plcontainer_cleanup, 0);
 	explicit_subtransactions = NIL;

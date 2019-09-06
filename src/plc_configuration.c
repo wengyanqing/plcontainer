@@ -649,7 +649,11 @@ char *get_sharing_options(runtimeConfEntry *conf, int container_slot, bool *has_
 			
 			gpdb_dir_sz = strlen(IPC_GPDB_BASE_DIR) + 1 + 16 + 1 + 16 + 1 + 4 + 1;
 			*uds_dir = pmalloc(gpdb_dir_sz);
-			sprintf(*uds_dir, "%s.%d.%d.%d", IPC_GPDB_BASE_DIR, getpid(), domain_socket_no++, container_slot);
+			if (CurrentBackendType == BACKEND_DOCKER) {
+                sprintf(*uds_dir, "%s.%d.%d.%d", IPC_GPDB_BASE_DIR, getpid(), domain_socket_no++, container_slot);
+            } else if (CurrentBackendType == BACKEND_PROCESS) {
+			    sprintf(*uds_dir, "%s", IPC_GPDB_BASE_DIR);
+            }
 			volumes[i] = pmalloc(10 + gpdb_dir_sz + strlen(IPC_CLIENT_DIR));
 			sprintf(volumes[i], " %c\"%s:%s:rw\"", comma, *uds_dir, IPC_CLIENT_DIR);
 			totallen += strlen(volumes[i]);

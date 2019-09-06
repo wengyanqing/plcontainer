@@ -44,6 +44,8 @@ enum PLC_BACKEND_TYPE {
 	UNIMPLEMENT_TYPE
 };
 
+extern enum PLC_BACKEND_TYPE CurrentBackendType;
+
 void plc_backend_prepareImplementation(enum PLC_BACKEND_TYPE imptype);
 
 /* interfaces for plc backend. */

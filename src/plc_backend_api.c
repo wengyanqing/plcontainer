@@ -7,8 +7,10 @@
 
 #include "plc_backend_api.h"
 #include "plc_docker_api.h"
+#include "plc_process_api.h"
 #include "common/comm_utils.h"
 
+enum PLC_BACKEND_TYPE CurrentBackendType;
 static PLC_FunctionEntriesData *CurrentBackend;
 
 /* If backend api returns error, the string will include more details. */
@@ -24,6 +26,16 @@ static PLC_FunctionEntriesData DockerBackend =
 	plc_docker_delete_container,
 };
 
+static PLC_FunctionEntriesData ProcessBackend =
+{
+	plc_process_create_container,
+	plc_process_start_container,
+	plc_process_kill_container,
+	plc_process_inspect_container,
+	plc_process_wait_container,
+	plc_process_delete_container,
+};
+
 /*
  * NOTE: Do not call plc_elog(>=ERROR, ...) in backend api code. Let the callers
  * handle according to the return value and error message string.
@@ -35,9 +47,14 @@ void plc_backend_prepareImplementation(enum PLC_BACKEND_TYPE imptype) {
 	 * Currenty plcontainer only supports the BACKEND_DOCKER type.
 	 * Other possible backends include BACKEND_GARDEN, BACKEND_PROCESS, etc.
 	 */
+    CurrentBackendType = imptype;
+
 	switch (imptype) {
 		case BACKEND_DOCKER:
 			CurrentBackend = &DockerBackend;
+			break;
+		case BACKEND_PROCESS:
+			CurrentBackend = &ProcessBackend;
 			break;
 		default:
 			plc_elog(ERROR, "Unsupported plc backend type: %d", imptype);

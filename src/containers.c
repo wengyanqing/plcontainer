@@ -370,17 +370,7 @@ plcConn *start_backend(runtimeConfEntry *conf) {
 	time_t rawtime;
 	struct tm *timeinfo;
 
-
-	/*
-	 * Hardcode as Docker at this moment. In the future the type should
-	 * be set in conf.
-	 */
-	enum PLC_BACKEND_TYPE plc_backend_type = BACKEND_DOCKER;
-
 	container_slot = find_container_slot();
-
-	plc_backend_prepareImplementation(plc_backend_type);
-
 	/*
 	 *  Here the uds_dir is only used by connection of domain socket type.
 	 *  It remains NULL for connection of non domain socket type.
