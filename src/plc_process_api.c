@@ -29,18 +29,16 @@
 
 int plc_process_create_container(runtimeConfEntry *conf, char **name, int container_id, char **uds_dir) {
     (void)(name);
-
-	bool has_error;
-	char *volumeShare = get_sharing_options(conf, container_id, &has_error, uds_dir);
+    bool has_error;
+    char *volumeShare = get_sharing_options(conf, container_id, &has_error, uds_dir);
     (void)(volumeShare);
-
-	/*
-	 *  no shared volumes should not be treated as an error, so we use has_error to
-	 *  identifier whether there is an error when parse sharing options.
-	 */
-	if (has_error == true) {
-		return -1;
-	}
+/*
+ *  no shared volumes should not be treated as an error, so we use has_error to
+ *  identifier whether there is an error when parse sharing options.
+ */
+    if (has_error == true) {
+        return -1;
+    }
 
     pid_t pid = -1;
     int res = 0;
@@ -52,12 +50,17 @@ int plc_process_create_container(runtimeConfEntry *conf, char **name, int contai
         if ((env_str = getenv("GPHOME")) == NULL) {
             plc_elog (ERROR, "GPHOME is not set");
         } else {
-            sprintf(binaryPath, "%s/bin/plcontainer_clients/pyclient", env_str);
+            if (strstr(conf->command, "pyclient") != NULL) {
+                sprintf(binaryPath, "%s/bin/plcontainer_clients/pyclient", env_str);
+            } else {
+                sprintf(binaryPath, "%s/bin/plcontainer_clients/rclient", env_str);
+            }
         }
         char uid_string[1024] = {0};
         char gid_string[1024] = {0};
         sprintf(uid_string, "EXECUTOR_UID=%d", getuid());
         sprintf(gid_string, "EXECUTOR_GID=%d", getgid());
+        // TODO add more environment variables needed.
         char *const env[] = {
             "USE_CONTAINER_NETWORK=false",
             uid_string,
@@ -74,44 +77,43 @@ int plc_process_create_container(runtimeConfEntry *conf, char **name, int contai
     sprintf(*name, "%d", pid); 
 
     backend_log(LOG, "create backend process with name:%s", *name); 
-	
-	return res;
+    return res;
 }
 
 int plc_process_start_container(const char *name) {
-	int res = 0;
+    int res = 0;
     backend_log(LOG, "start backend process with name:%s", name); 
-	return res;
+    return res;
 }
 
 int plc_process_kill_container(const char *name) {
-	int res = 0;
-	int pid = atoi(name);
+    int res = 0;
+    int pid = atoi(name);
     kill(pid, SIGKILL);
     backend_log(LOG, "kill backend process with name:%s", name); 
-	return res;
+    return res;
 }
 
 int plc_process_inspect_container(const char *name, char **element, plcInspectionMode type) {
-	int res = 0;
+    int res = 0;
     *element = palloc(64);
     sprintf(*element, "process:%s type:%d", name, type); 
     backend_log(LOG, "inspect backend process with name:%s", name); 
-	return res;
+    return res;
 }
 
 int plc_process_wait_container(const char *name) {
-	int res = 0;
+    int res = 0;
     int pid = atoi(name);
     waitpid(pid, &res, 0);
     backend_log(LOG, "wait backend process with name:%s", name); 
-	return res;
+    return res;
 }
 
 int plc_process_delete_container(const char *name) {
-	int res = 0;
-	int pid = atoi(name);
+    int res = 0;
+    int pid = atoi(name);
     kill(pid, SIGKILL);
     backend_log(LOG, "delete backend process with name:%s", name); 
-	return res;
+    return res;
 }
