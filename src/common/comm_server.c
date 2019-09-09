@@ -23,6 +23,7 @@
 #include "comm_server.h"
 #include "comm_log.h"
 #include "messages/messages.h"
+#include "message_protoutils.h"
 
 /*
  * Function binds the socket and starts listening on it: tcp
@@ -199,7 +200,7 @@ int start_listener() {
 	if (strcasecmp("true", use_container_network) == 0) {
 		sock = start_listener_inet();
 	} else if (strcasecmp("false", use_container_network) == 0){
-		if ((CurrentBackendType == BACKEND_DOCKER) && (geteuid() != 0 || getuid() != 0)) {
+		if (false && (geteuid() != 0 || getuid() != 0)) {
 			plc_elog(ERROR, "Must run as root and then downgrade to usual user.");
 			return -1;
 		}
@@ -266,13 +267,13 @@ void receive_loop(void (*handle_call)(plcMsgCallreq *, plcConn *), plcConn *conn
 	plcMessage *msg;
 	int res = 0;
 
-	res = plcontainer_channel_receive(conn, &msg, MT_PING_BIT);
+	res = plcontainer_channel_receive(conn, &msg, /*MT_PING_BIT*/ MT_PROTOBUF_BIT);
 	if (res < 0) {
 		plc_elog(ERROR, "Error receiving data from the backend, %d", res);
 		return;
 	}
 
-	res = plcontainer_channel_send(conn, msg);
+	res = plcontainer_channel_send(conn, (plcMessage *) plcMsgPingToProto((plcMsgPing *)msg));
 	if (res < 0) {
 		plc_elog(ERROR, "Cannot send 'ping' message response");
 		return;
@@ -280,7 +281,7 @@ void receive_loop(void (*handle_call)(plcMsgCallreq *, plcConn *), plcConn *conn
 	pfree(msg);
 
 	while (1) {
-		res = plcontainer_channel_receive(conn, &msg, MT_CALLREQ_BIT);
+		res = plcontainer_channel_receive(conn, &msg, /*MT_CALLREQ_BIT*/ MT_PROTOBUF_BIT);
 
 		if (res < 0) {
 				plc_elog(ERROR, "Error receiving data from the peer: %d", res);

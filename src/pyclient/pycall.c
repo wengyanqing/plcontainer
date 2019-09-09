@@ -19,6 +19,7 @@
 #include "pyquote.h"
 #include "plpy_spi.h"
 #include "pycache.h"
+#include "common/message_protoutils.h"
 
 #include <Python.h>
 
@@ -449,7 +450,7 @@ static int process_call_results(plcConn *conn, PyObject *retval, plcPyFunction *
 	if (retcode == 0) {
 		/* We manually state that we are sending the data to avoid message interleaving */
 		plc_sending_data = 1;
-		plcontainer_channel_send(conn, (plcMessage *) res);
+		plcontainer_channel_send(conn, (plcMessage *) plcMsgResultToProto(res));
 		plc_sending_data = 0;
 	}
 

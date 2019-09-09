@@ -22,6 +22,7 @@
 #define MT_RAW            'W'
 #define MT_SUBTRANSACTION 'N'
 #define MT_SUBTRAN_RESULT 'Z'
+#define MT_PROTOBUF       'X'
 #define MT_EOF            0
 
 #define MT_CALLREQ_BIT        0x1LL
@@ -39,6 +40,7 @@
 #define MT_EOF_BIT            0x1000LL
 #define MT_QUOTE_BIT          0x2000LL
 #define MT_QUOTE_RESULT_BIT   0x4000LL
+#define MT_PROTOBUF_BIT       0x8000LL
 
 #define MT_ALL_BITS        0xFFFFffffFFFFffffLL
 

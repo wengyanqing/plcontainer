@@ -73,7 +73,7 @@ void free_arguments(plcArgument *args, int nargs, bool isShared, bool isSender) 
 		free_type(&args[i].type);
 	}
 
-	if (args)
+	if (args && (nargs > 0))
 		pfree(args);
 }
 

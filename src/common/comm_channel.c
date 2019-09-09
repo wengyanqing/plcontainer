@@ -35,6 +35,7 @@ interpreted as representing official policies, either expressed or implied, of t
 #include "comm_connectivity.h"
 #include "comm_server.h"
 #include "config.h"
+#include "message_protoutils.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -103,6 +104,12 @@ static int receive_call(plcConn *conn, plcMessage **mCall);
 static int receive_sql(plcConn *conn, plcMessage **mSql);
 static int receive_rawmsg(plcConn *conn, plcMessage **mRaw);
 
+/*
+ * message protobuf
+ */
+static int receive_protobuf_message(plcConn *conn, plcMessage **mProtoMsg);
+static int send_protobuf_message(plcConn *conn, plcProtoMessage *mProtoMsg);
+
 /* Public API Functions */
 
 int plcontainer_channel_send(plcConn *conn, plcMessage *msg) {
@@ -141,6 +148,9 @@ int plcontainer_channel_send(plcConn *conn, plcMessage *msg) {
 			break;
 		case MT_SUBTRANSACTION:
 			res = send_subtransaction(conn, (plcMsgSubtransaction *) msg);
+			break;
+		case MT_PROTOBUF:
+			res = send_protobuf_message(conn, (plcProtoMessage *) msg);
 			break;
 		default:
 			plc_elog(ERROR, "UNHANDLED MESSAGE: '%c'", msg->msgtype);
@@ -215,6 +225,11 @@ int plcontainer_channel_receive(plcConn *conn, plcMessage **msg, int64 mask) {
 				if (!(mask & MT_SUBTRAN_RESULT_BIT))
 					goto unexpected_type;
 				res = receive_subtransaction_result(conn, msg);
+				break;
+			case MT_PROTOBUF:
+				if (!(mask & MT_PROTOBUF_BIT))
+					goto unexpected_type;
+				res = receive_protobuf_message(conn, msg);
 				break;
 			default:
 				plc_elog(ERROR, "unknown message type: %d / '%c'", (int) cType, cType);
@@ -1313,4 +1328,64 @@ void fill_prepare_argument(plcArgument *arg, char *str, plcDatatype plcData) {
 	arg->name = NULL;
 	arg->data.isnull = 1;
 	arg->data.value = NULL;
+}
+
+static int receive_protobuf_message(plcConn *conn, plcMessage **mMsg) {
+	int res;
+    plcProtoMessage *proto = pmalloc(sizeof(plcProtoMessage));
+    channel_elog(WARNING, "Receiving protobuf message request");
+    res = receive_uint32(conn, &proto->proto_type);
+    res |= receive_uint32(conn, &proto->body_length);
+    if (proto->body_length <= 0) {
+        return -1;
+    } else {
+        proto->body = (uint8_t *)pmalloc(proto->body_length);
+        res |= receive_raw(conn, (char *)proto->body, proto->body_length);
+    }
+    channel_elog(WARNING, "Received protobuf message request and returned %d", res);
+
+    switch (proto->proto_type) {
+        case MT_PING:
+            res = protoToPlcMsgPing(proto, (plcMsgPing **)mMsg);
+            break;
+        case MT_CALLREQ:
+            res = protoToPlcMsgCallreq(proto, (plcMsgCallreq **)mMsg);
+            break;
+        case MT_RESULT:
+            res = protoToPlcMsgResult(proto, (plcMsgResult **)mMsg);
+            break;
+        case MT_EXCEPTION:
+        case MT_LOG:
+        case MT_QUOTE:
+        case MT_QUOTE_RESULT:
+        case MT_SQL:
+        case MT_RAW:
+        case MT_SUBTRANSACTION:
+        case MT_SUBTRAN_RESULT:
+            // TODO
+        default:
+            plc_elog(ERROR, "unknown message type: %d / '%c'", (int) proto->proto_type, proto->proto_type);
+            *mMsg = NULL;
+            return -1;
+    }
+
+	return res;
+}
+
+static int send_protobuf_message(plcConn *conn, plcProtoMessage *mProtoMsg) {
+	int res = 0;
+    uint32_t i;
+
+	channel_elog(WARNING, "Sending protobuf message to client");
+	res |= message_start(conn, MT_PROTOBUF);
+	res |= send_uint32(conn, mProtoMsg->proto_type);
+	res |= send_uint32(conn, mProtoMsg->body_length);
+    for (i=0;i<mProtoMsg->body_length;i++) {
+        res |= send_char(conn, mProtoMsg->body[i]);
+    }
+
+	res |= message_end(conn);
+	channel_elog(WARNING, "Finished sending protobuf message");
+	return res;
+
 }

@@ -38,6 +38,7 @@
 #include "sqlhandler.h"
 #include "subtransaction_handler.h"
 #include "plc_backend_api.h"
+#include "common/message_protoutils.h"
 
 #ifdef PG_MODULE_MAGIC
 
@@ -338,7 +339,7 @@ static plcProcResult *plcontainer_get_result(FunctionCallInfo fcinfo,
 		if (conn != NULL) {
 			int res;
 
-			res = plcontainer_channel_send(conn, (plcMessage *) req);
+			res = plcontainer_channel_send(conn, (plcMessage *) plcMsgCallreqToProto(req));
 #ifndef PLC_PG				
 			SIMPLE_FAULT_INJECTOR("plcontainer_after_send_request");
 #endif
@@ -353,7 +354,7 @@ static plcProcResult *plcontainer_get_result(FunctionCallInfo fcinfo,
 			while (1) {
 				plcMessage *answer;
 
-				res = plcontainer_channel_receive(conn, &answer, MT_ALL_BITS);
+				res = plcontainer_channel_receive(conn, &answer, /*MT_ALL_BITS*/ MT_PROTOBUF_BIT);
 #ifndef PLC_PG					
 				SIMPLE_FAULT_INJECTOR("plcontainer_after_recv_request");
 #endif				

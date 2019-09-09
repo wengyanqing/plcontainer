@@ -1,0 +1,135 @@
+syntax = "proto2";
+
+package plcontainer;
+
+message ProcSrc {
+	required string src = 1;
+	required string name = 2; 
+}
+
+enum DataType {
+    INT1 = 0;
+    INT2 = 1;
+    INT4 = 2;
+    INT8 = 3;
+    FLOAT4 = 4;
+    FLOAT8 = 5;
+    TEXT = 6;
+    ARRAY = 7;
+    UDT = 8;
+    BYTEA = 9;
+    INVALID = 10;
+    MAX = 11;
+}
+
+message PlcType {
+    required DataType   type = 1;
+    required int32      nSubTypes = 2;
+    required string     typeName = 3;
+    optional PlcType    subTypes = 4; 
+}
+
+enum QuoteType {
+    LITERAL = 0;
+    NULLABLE = 1;
+    IDENT = 2;
+}
+
+
+message RawData {
+    required int32      isnull = 1;
+    required bytes      value = 2;
+}
+
+message Argument {
+    required PlcType    type = 1;
+    required string     name = 2;
+    required RawData    data = 3;    
+}
+
+message Header {
+    required uint32 message_type = 1;
+    required uint32 message_length = 2;
+}
+
+message Ping {
+	required string version = 1;
+}
+
+message Error {
+    required string message = 1;
+    required string stacktrace = 2;
+}
+
+message CallRequest {
+	required uint32     objectid = 1;
+	required int32      hasChanged = 2;
+    required ProcSrc    proc = 3;
+    required int32	    logLevel = 4;
+    required PlcType    retType = 5;
+    required int32      retset = 6;
+    required int32      nargs = 7;
+    required string     serverenc = 8;
+    repeated Argument   args = 9;
+}
+
+message Result {
+    required uint32     rows = 1;
+    required uint32     cols = 2;
+    repeated PlcType    types = 3;
+    repeated string     names = 4;
+    repeated RawData    data = 5;
+    optional Error      exception = 6;
+}
+
+message Log {
+    required int32      level = 1;
+    required string     message = 2;
+}
+
+message Quote {
+    required QuoteType  quote_type = 1;
+    required string     msg = 2;
+}
+
+message QuoteResult {
+    required QuoteType  quote_type = 1;
+    required string     result = 2;
+}
+
+message SQL {
+    enum SqlType {
+        INVALID = 0;
+        STATEMENT = 1;
+        CURSOR_CLOSE = 2;
+        FETCH = 3;
+        CURSOR_OPEN = 4;
+        PREPARE = 5;
+        PEXECUTE = 6;
+        UNPREPARE = 7;
+        MAX = 8;
+    }
+
+    required SqlType    sqltype = 1;
+    repeated Argument   args = 3;
+    required int64      limit = 2;
+    required int64      pplan = 4;
+    required string     statement = 5;
+    optional int32      nargs = 6;
+}
+
+message Raw {
+    required int32      size = 1;
+    required bytes      data = 2;
+}
+
+message Subtransaction {
+    required string     action = 1;
+    required string     type = 2;
+}
+
+message SubtransactionResult {
+    required int32      result = 1;
+
+}
+

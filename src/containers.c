@@ -37,6 +37,7 @@
 #include "containers.h"
 #include "plc_backend_api.h"
 
+#include "common/message_protoutils.h"
 
 
 typedef struct {
@@ -490,9 +491,9 @@ plcConn *start_backend(runtimeConfEntry *conf) {
 			     conf->useContainerNetwork ? "network" : "unix domain socket");
 			conn->container_slot = container_slot;
 
-			res = plcontainer_channel_send(conn, (plcMessage *) mping);
+			res = plcontainer_channel_send(conn, (plcMessage *) plcMsgPingToProto(mping));
 			if (res == 0) {
-				res = plcontainer_channel_receive(conn, &mresp, MT_PING_BIT);
+				res = plcontainer_channel_receive(conn, &mresp, /*MT_PING_BIT*/ MT_PROTOBUF_BIT);
 				if (mresp != NULL)
 					pfree(mresp);
 				if (res == 0) {

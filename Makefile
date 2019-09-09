@@ -88,14 +88,16 @@ endif
 PLCONTAINERDIR = $(DESTDIR)$(datadir)/plcontainer
 
 override CFLAGS += -Werror -Wextra -Wall  -Wno-sign-compare
+override SHLIB_LINK += -lprotobuf-c
 
 ifeq ($(ENABLE_COVERAGE),yes)
   override CFLAGS += -coverage
   override SHLIB_LINK += -lgcov --coverage
   override CLIENT_CFLAGS += -coverage -O0 -g
-  override CLIENT_LDFLAGS += -lgcov --coverage
+  override CLIENT_LDFLAGS += -lgcov --coverage -lprotobuf-c
 else
-  override CLIENT_CFLAGS += -O3 -g
+  override CLIENT_CFLAGS += -g 
+  override CLIENT_LDFLAGS += -lprotobuf-c
 endif
 
 # detected the docker API version, only for centos 6
