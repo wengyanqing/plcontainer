@@ -52,7 +52,7 @@ static int check_runtime_id(const char *id);
 static char *get_coordinator_address(void);
 static int get_new_container_from_coordinator(const char *runtime_id, plcContext *ctx);
 static plcContext *get_new_container_ctx(const char *runtime_id);
-static int init_container_connection(plcContext *ctx);
+//static int init_container_connection(plcContext *ctx);
 static void insert_container_ctx(const char *runtime_id, plcContext *ctx, int slot);
 
 static void insert_container_ctx(const char *runtime_id, plcContext *ctx, int slot)
@@ -103,21 +103,23 @@ static plcContext *get_new_container_ctx(const char *runtime_id)
 	plcContextInit(ctx);
 
 	res = get_new_container_from_coordinator(runtime_id, ctx);
-
+    sleep(2);
 	if (res != 0){
 		/* TODO: Using errors instead of elog */
 		elog(ERROR, "Cannot find an available container");
 	}
-
+/*
 	res = init_container_connection(ctx);
 
 	if (res != 0)
 	{
+*/
 		/* TODO: Using errors instead of elog */
+/*
 		plcFreeContext(ctx);
 		elog(ERROR, "Cannot connect to container server");
 	}
-
+*/
 	return ctx;
 }
 
@@ -206,72 +208,72 @@ int plcontainer_delete_container()
  * when socket fd of plcConn is ready, make a shakehand to the server
  * returns 0 if successfully, otherwise -1 if failed.
  **/
-static int init_container_connection(plcContext *ctx)
-{
-	plcMsgPing *mping = NULL;
-	plcConn *conn = (plcConn *)ctx;
-
-	unsigned int sleepus = 25000;
-	unsigned int sleepms = 0;
-
-	mping = (plcMsgPing*) palloc(sizeof(plcMsgPing));
-	mping->msgtype = MT_PING;
-
-	while (sleepms < CONTAINER_CONNECT_TIMEOUT_MS) {
-		int res = 0;
-		plcMessage *mresp = NULL;
-		conn->sock = plcDialToServer("unix", ctx->service_address);
-		if (conn->sock > 0) {
-			res = plcontainer_channel_send(conn, (plcMessage *) mping);
-			if (res == 0)
-			{
-				res = plcontainer_channel_receive(conn, &mresp, MT_PING_BIT);
-				if (mresp != NULL)
-					pfree(mresp);
-
-				if (res == 0)
-				{
-					pfree(mping);
-					return 0;
-				}
-				else
-				{
-					plc_elog(DEBUG1, "Failed to receive pong from client.");
-				}
-			} else {
-				plc_elog(DEBUG1, "Failed to send ping to client.");
-			}
-		} else if (conn->sock == -1) {
-			return -1;
-		}
-
-		/*
-		 * Note about the plcDisconnect(conn) code above:
-		 *
-		 * We saw the case that connection() + send() are ok, but rx
-		 * fails with "reset by peer" while the client program has not started
-		 * listen()-ing. That happens with the docker bridging + NAT network
-		 * solution when the QE connects via the lo interface (i.e. 127.0.0.1).
-		 * We did not try other solutions like macvlan, etc yet. It appears
-		 * that this is caused by the docker proxy program. We could work
-		 * around this by setting docker userland-proxy as false or connecting via
-		 * non-localhost on QE, however to make our code tolerate various
-		 * configurations, we allow reconnect here since that does not seemi
-		 * to harm the normal case although since client will just accept()
-		 * the tcp connection once reconnect should never happen.
-		 */
-
-
-		/* TODO: using waitlatch()? */
-		usleep(sleepus);
-		plc_elog(DEBUG1, "Waiting for %u ms for before reconnecting", sleepus / 1000);
-		sleepms += sleepus / 1000;
-		sleepus = sleepus >= 200000 ? 200000 : sleepus * 2;
-	}
-
-	pfree(mping);
-	return -1;
-}
+// static int init_container_connection(plcContext *ctx)
+// {
+// 	plcMsgPing *mping = NULL;
+// 	plcConn *conn = (plcConn *)ctx;
+// 
+// 	unsigned int sleepus = 25000;
+// 	unsigned int sleepms = 0;
+// 
+// 	mping = (plcMsgPing*) palloc(sizeof(plcMsgPing));
+// 	mping->msgtype = MT_PING;
+// 
+// 	while (sleepms < CONTAINER_CONNECT_TIMEOUT_MS) {
+// 		int res = 0;
+// 		plcMessage *mresp = NULL;
+// 		conn->sock = plcDialToServer("unix", ctx->service_address);
+// 		if (conn->sock > 0) {
+// 			res = plcontainer_channel_send(conn, (plcMessage *) mping);
+// 			if (res == 0)
+// 			{
+// 				res = plcontainer_channel_receive(conn, &mresp, MT_PING_BIT);
+// 				if (mresp != NULL)
+// 					pfree(mresp);
+// 
+// 				if (res == 0)
+// 				{
+// 					pfree(mping);
+// 					return 0;
+// 				}
+// 				else
+// 				{
+// 					plc_elog(DEBUG1, "Failed to receive pong from client.");
+// 				}
+// 			} else {
+// 				plc_elog(DEBUG1, "Failed to send ping to client.");
+// 			}
+// 		} else if (conn->sock == -1) {
+// 			return -1;
+// 		}
+// 
+// 		/*
+// 		 * Note about the plcDisconnect(conn) code above:
+// 		 *
+// 		 * We saw the case that connection() + send() are ok, but rx
+// 		 * fails with "reset by peer" while the client program has not started
+// 		 * listen()-ing. That happens with the docker bridging + NAT network
+// 		 * solution when the QE connects via the lo interface (i.e. 127.0.0.1).
+// 		 * We did not try other solutions like macvlan, etc yet. It appears
+// 		 * that this is caused by the docker proxy program. We could work
+// 		 * around this by setting docker userland-proxy as false or connecting via
+// 		 * non-localhost on QE, however to make our code tolerate various
+// 		 * configurations, we allow reconnect here since that does not seemi
+// 		 * to harm the normal case although since client will just accept()
+// 		 * the tcp connection once reconnect should never happen.
+// 		 */
+// 
+// 
+// 		/* TODO: using waitlatch()? */
+// 		usleep(sleepus);
+// 		plc_elog(DEBUG1, "Waiting for %u ms for before reconnecting", sleepus / 1000);
+// 		sleepms += sleepus / 1000;
+// 		sleepus = sleepus >= 200000 ? 200000 : sleepus * 2;
+// 	}
+// 
+// 	pfree(mping);
+// 	return -1;
+// }
 
 // TODO: read shm to get the address of coordinator
 static char *get_coordinator_address(void) {
