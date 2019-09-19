@@ -103,7 +103,7 @@ static Plcontainer__PlcType *plcTypeToProto(plcType *obj) {
     Plcontainer__PlcType *ret = pmalloc(sizeof(Plcontainer__PlcType));
     plcontainer__plc_type__init(ret);
 
-    ret->type = obj->type;
+    ret->type = (Plcontainer__DataType)obj->type;
     ret->typename_ = obj->typeName;
     if (obj->type == PLC_DATA_ARRAY || obj->type == PLC_DATA_UDT) {
         // TODO
@@ -117,7 +117,7 @@ static Plcontainer__PlcType *plcTypeToProto(plcType *obj) {
 }
 
 static int protoToPlcType(Plcontainer__PlcType *proto, plcType *obj) {
-    obj->type = proto->type;
+    obj->type = (plcDatatype)proto->type;
     obj->typeName = pstrdup(proto->typename_);
     if (proto->type == PLCONTAINER__DATA_TYPE__ARRAY || proto->type == PLCONTAINER__DATA_TYPE__UDT) {
         // TODO

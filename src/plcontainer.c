@@ -341,7 +341,7 @@ static plcProcResult *plcontainer_get_result(FunctionCallInfo fcinfo,
 
 			res = plcontainer_channel_send(conn, (plcMessage *) plcMsgCallreqToProto(req));
 #ifndef PLC_PG				
-			SIMPLE_FAULT_INJECTOR("plcontainer_after_send_request");
+			//SIMPLE_FAULT_INJECTOR("plcontainer_after_send_request");
 #endif
 
 			if (res < 0) {
@@ -356,7 +356,7 @@ static plcProcResult *plcontainer_get_result(FunctionCallInfo fcinfo,
 
 				res = plcontainer_channel_receive(conn, &answer, /*MT_ALL_BITS*/ MT_PROTOBUF_BIT);
 #ifndef PLC_PG					
-				SIMPLE_FAULT_INJECTOR("plcontainer_after_recv_request");
+				//SIMPLE_FAULT_INJECTOR("plcontainer_after_recv_request");
 #endif				
 				if (res < 0) {
 					plc_elog(ERROR, "Error receiving data from the client. "
@@ -715,7 +715,7 @@ plcontainer_function_handler(FunctionCallInfo fcinfo, plcProcInfo *proc)
 	}
 
 #ifndef PLC_PG
-		SIMPLE_FAULT_INJECTOR("plcontainer_before_udf_finish");
+		//SIMPLE_FAULT_INJECTOR("plcontainer_before_udf_finish");
 #endif
 
 	return datumreturn;

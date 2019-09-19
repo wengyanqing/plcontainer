@@ -35,6 +35,9 @@ OBJS = $(foreach FILE,$(FILES),$(subst .c,.o,$(FILE)))
 PGXS := $(shell pg_config --pgxs)
 include $(PGXS)
 
+override CFLAGS += -DHAVE_ATEXIT
+override LDFLAGS += -bundle -bundle_loader /Users/iweng/workspace/tools/gpdb6/bin/postgres
+
 ifeq ($(PLC_PG),yes)
 	override CFLAGS += -DPLC_PG
 #	override CFLAGS += -DPLC_PG  -Wno-sign-compare
@@ -87,7 +90,7 @@ endif
 
 PLCONTAINERDIR = $(DESTDIR)$(datadir)/plcontainer
 
-override CFLAGS += -Werror -Wextra -Wall  -Wno-sign-compare
+override CFLAGS += -Wextra -Wall  -Wno-sign-compare
 override SHLIB_LINK += -lprotobuf-c
 
 ifeq ($(ENABLE_COVERAGE),yes)
@@ -132,7 +135,7 @@ install-extra: installdirs
 install-clients:
 	$(MKDIR_P) '$(DESTDIR)$(bindir)/plcontainer_clients'
 	cp $(PYCLIENTDIR)/* $(DESTDIR)$(bindir)/plcontainer_clients/
-	cp $(RCLIENTDIR)/*  $(DESTDIR)$(bindir)/plcontainer_clients/
+	#cp $(RCLIENTDIR)/*  $(DESTDIR)$(bindir)/plcontainer_clients/
 
 .PHONY: installcheck
 installcheck:
@@ -141,12 +144,12 @@ installcheck:
 .PHONY: build-clients
 build-clients:
 	CC='$(CC)' CFLAGS='$(CLIENT_CFLAGS)' LDFLAGS='$(CLIENT_LDFLAGS)' $(MAKE) -C $(SRCDIR)/pyclient all
-	CC='$(CC)' CFLAGS='$(CLIENT_CFLAGS)' LDFLAGS='$(CLIENT_LDFLAGS)' $(MAKE) -C $(SRCDIR)/rclient all
+	#CC='$(CC)' CFLAGS='$(CLIENT_CFLAGS)' LDFLAGS='$(CLIENT_LDFLAGS)' $(MAKE) -C $(SRCDIR)/rclient all
 
 .PHONY: clean-clients
 clean-clients:
 	$(MAKE) -C $(SRCDIR)/pyclient clean
-	$(MAKE) -C $(SRCDIR)/rclient clean
+	#$(MAKE) -C $(SRCDIR)/rclient clean
 
 .PHONY: clean-coverage
 clean-coverage:
