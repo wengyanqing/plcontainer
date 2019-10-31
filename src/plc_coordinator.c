@@ -46,6 +46,7 @@
 #include "common/comm_shm.h"
 #include "common/comm_channel.h"
 #include "common/messages/messages.h"
+#include "plc/plc_coordinator.h"
 
 #include "interface.h"
 
@@ -83,6 +84,8 @@ static int start_stand_alone_process(const char* uds_address);
 static void shm_message_queue_receiver_init(dsm_segment *seg);
 static dsm_handle shm_message_queue_sender_init();
 static int update_containers_status();
+static int store_container_info(ContainerKey *key, pid_t server_pid, char* container_id);
+static int clear_container_info(ContainerKey *key);
 
 HTAB *container_status_table;
 
@@ -283,6 +286,7 @@ plc_coordinator_main(Datum datum)
     char address[500];
     snprintf(address, sizeof(address), "unix:///tmp/.plcoordinator.%ld.unix.sock", (long)getpid());
     PLCoordinatorServer *server = start_server(address);
+    //AsyncServer *server = start_server(address);
     plc_elog(LOG, "server is started on address:%s", server->address);
 
     while (!got_sigterm) {
@@ -300,7 +304,8 @@ plc_coordinator_main(Datum datum)
 */
         if (process_request(server, 10) < 0) {
             plc_elog(ERROR, "server process request error.");
-        
+        }
+    
         if (plcontainer_stand_alone_mode) {
             update_containers_status();
         }

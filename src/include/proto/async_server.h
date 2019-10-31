@@ -18,6 +18,9 @@ extern "C"
 #include "mb/pg_wchar.h"
 #include "common/comm_dummy.h"
 #include "plc/containers.h"
+#include "cdb/cdbvars.h"
+#include "utils/guc.h"
+#include "plc/plc_coordinator.h"
 }
 
 using grpc::Server;
@@ -32,19 +35,16 @@ using namespace plcontainer;
 
 class AsyncServer final {
 public:
-    AsyncServer(const std::string& uds);
     ~AsyncServer();
 
-    void Init();    
+    void Init(const std::string &uds);    
     void Start();
     void ProcessRequest(int timeout_seconds);
 
 private:
-    std::string uds_;
     PLCoordinator::AsyncService service_;
     std::unique_ptr<Server> server_;
     std::unique_ptr<ServerCompletionQueue> cq_;
-    void* call_ = nullptr;
 };
 
 #endif

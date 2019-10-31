@@ -408,9 +408,12 @@ int get_new_container_from_coordinator(const char *runtime_id, plcContext *ctx) 
     PLCoordinatorClient     client(grpc::CreateChannel(
       "unix://"+server_addr, grpc::InsecureChannelCredentials()));
     
-    request.set_request("request info, server address:"+server_addr);
+    request.set_runtime_id(runtime_id);
+    request.set_qe_pid(getpid());
+    request.set_session_id(gp_session_id);
+    request.set_command_count(gp_command_count);
     client.StartContainer(request, response);
-    ctx->service_address = const_cast<char *>(response.result().c_str());
+    ctx->service_address = const_cast<char *>(response.container_address().c_str());
     return 0;
 }
 
@@ -420,16 +423,16 @@ PLCoordinatorClient::PLCoordinatorClient(std::shared_ptr<grpc::Channel> channel)
 
 void PLCoordinatorClient::StartContainer(const StartContainerRequest &request, StartContainerResponse &response) {
     grpc::ClientContext context;
-    plc_elog(WARNING, "StartContainer request:%s", request.DebugString().c_str());
+    plc_elog(DEBUG1, "StartContainer request:%s", request.DebugString().c_str());
     grpc::Status status = stub_->StartContainer(&context, request, &response);
-    plc_elog(WARNING, "StartContainer response:%s", response.DebugString().c_str());
+    plc_elog(DEBUG1, "StartContainer response:%s", response.DebugString().c_str());
     plc_elog(DEBUG1, "StartContainer finished with status %d", status.error_code());
 }
 
 void PLCoordinatorClient::StopContainer(const StopContainerRequest &request, StopContainerResponse &response) {
     grpc::ClientContext context;
-    plc_elog(WARNING, "StopContainer request:%s", request.DebugString().c_str());
+    plc_elog(DEBUG1, "StopContainer request:%s", request.DebugString().c_str());
     grpc::Status status = stub_->StopContainer(&context, request, &response);
-    plc_elog(WARNING, "StopContainer response:%s", response.DebugString().c_str());
+    plc_elog(DEBUG2, "StopContainer response:%s", response.DebugString().c_str());
     plc_elog(DEBUG1, "StopContainer finished with status %d", status.error_code());
 }

@@ -24,12 +24,20 @@ typedef struct PLCoordinatorServer {
     const char *address;
     void *server;
 } PLCoordinatorServer;
+/*
+typedef struct AsyncServer {
+    const char *address;
+    void *server;
+} AsyncServer;
+*/
 
 // C interface definition
 Datum plcontainer_function_handler(FunctionCallInfo fcinfo, plcProcInfo *proc, MemoryContext function_cxt);
  
 PLCoordinatorServer *start_server(const char *address);
 int process_request(PLCoordinatorServer *server, int timeout_seconds);
+//AsyncServer *start_server(const char *address);
+//int process_request(AsyncServer *server, int timeout_seconds);
 
 int get_new_container_from_coordinator(const char *runtime_id, plcContext *ctx);
 

@@ -12,19 +12,25 @@ service PLCoordinator {
 }
 
 message StartContainerRequest {
-    string request = 1;
+    string  runtime_id = 1;
+    int32   qe_pid = 2;
+    int32   session_id = 3;
+    int32   command_count = 4;
 }
 
 message StartContainerResponse {
-    string result = 1;
+    int32   status = 1;
+    string  container_address = 2;
 }
 
 message StopContainerRequest {
-    string request = 1;
+    int32   qe_pid = 1;
+    int32   session_id = 2;
+    int32   command_count = 3;
 }
 
 message StopContainerResponse {
-    string result = 1;
+    int32   status = 1;
 }
 
 enum PlcRuntimeType {

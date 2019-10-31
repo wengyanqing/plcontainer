@@ -7,7 +7,8 @@
 #include <random>
 #include <string>
 #include <thread>
-
+#include <sys/types.h>
+#include <unistd.h>
 #include <grpc/grpc.h>
 #include <grpcpp/channel.h>
 #include <grpcpp/client_context.h>
@@ -24,6 +25,7 @@ extern "C"
 #include "common/comm_dummy.h"
 #include "plc/containers.h"
 #include "plc/plc_coordinator.h"
+#include "cdb/cdbvars.h"
 }
 
 using namespace plcontainer;
