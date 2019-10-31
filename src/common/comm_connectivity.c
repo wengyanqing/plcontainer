@@ -386,7 +386,6 @@ static void plcDisconnect_(plcConn *conn) {
 
 void plcContextInit(plcContext *ctx)
 {
-	plcConnInit(&ctx->conn);
 	init_pplan_slots(ctx);
 	ctx->service_address = NULL;
 }
@@ -398,9 +397,6 @@ void plcContextInit(plcContext *ctx)
  */
 void plcReleaseContext(plcContext *ctx)
 {
-	int n = 2;
-	while (--n>=0)
-		plcBufferRelease(&ctx->conn.buffer[n]);
 	deinit_pplan_slots(ctx);
 }
 
@@ -411,8 +407,6 @@ void plcReleaseContext(plcContext *ctx)
 
 void plcContextReset(plcContext *ctx)
 {
-	plcBufferInit(&ctx->conn.buffer[PLC_INPUT_BUFFER]);
-	plcBufferInit(&ctx->conn.buffer[PLC_OUTPUT_BUFFER]);
 	init_pplan_slots(ctx);
 }
 
@@ -421,7 +415,6 @@ void plcContextReset(plcContext *ctx)
  */
 void plcFreeContext(plcContext *ctx)
 {
-	close(ctx->conn.sock);
 	plcReleaseContext(ctx);
 	pfree(ctx);
 }

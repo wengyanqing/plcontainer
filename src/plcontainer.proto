@@ -6,6 +6,33 @@ service PLContainer {
     rpc FunctionCall(CallRequest) returns (CallResponse) {}
 }
 
+service PLCoordinator {
+    rpc StartContainer(StartContainerRequest) returns (StartContainerResponse) {}
+    rpc StopContainer(StopContainerRequest) returns (StopContainerResponse) {}
+}
+
+message StartContainerRequest {
+    string  runtime_id = 1;
+    int32   qe_pid = 2;
+    int32   session_id = 3;
+    int32   command_count = 4;
+}
+
+message StartContainerResponse {
+    int32   status = 1;
+    string  container_address = 2;
+}
+
+message StopContainerRequest {
+    int32   qe_pid = 1;
+    int32   session_id = 2;
+    int32   command_count = 3;
+}
+
+message StopContainerResponse {
+    int32   status = 1;
+}
+
 enum PlcRuntimeType {
     PYTHON = 0;
     R = 1;

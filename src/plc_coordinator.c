@@ -19,7 +19,6 @@
 #include "commands/dbcommands.h"
 #include "commands/extension.h"
 #include "executor/spi.h"
-#include "libpq/libpq-be.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "pgstat.h"
@@ -46,6 +45,9 @@
 #include "common/comm_shm.h"
 #include "common/comm_channel.h"
 #include "common/messages/messages.h"
+#include "plc/plc_coordinator.h"
+
+#include "interface.h"
 
 PG_MODULE_MAGIC;
 // PROTOTYPE:
@@ -60,7 +62,6 @@ static volatile sig_atomic_t got_sighup = false;
 static shmem_startup_hook_type prev_shmem_startup_hook = NULL;
 
 CoordinatorStruct *coordinator_shm;
-plcConn *conn;
 #define RECEIVE_BUF_SIZE 2048
 #define TIMEOUT_SEC 3
 /* meesage queue */
@@ -72,8 +73,6 @@ bool plcontainer_stand_alone_mode = true;
 char *plcontainer_stand_alone_server_path;
 
 
-static int start_container(const char *runtimeid, pid_t qe_pid, int session_id, int ccnt, char **uds_address);
-static int destroy_container(pid_t qe_pid, int session_id, int ccnt);
 static int send_message(QeRequest *request);
 static int receive_message();
 static int handle_request(QeRequest *req);
@@ -137,22 +136,6 @@ plc_coordinator_sighup(pg_attribute_unused() SIGNAL_ARGS)
     errno = save_errno;
 }
 
-
-static int
-plc_listen_socket()
-{
-    char address[500];
-    int sock;
-    snprintf(address, sizeof(address), "/tmp/.plcoordinator.%ld.unix.sock", (long)getpid());
-    sock = plcListenServer("unix", address);
-    if (sock < 0) {
-        elog(ERROR, "initialize socket failed");
-    }
-    coordinator_shm->protocol = CO_PROTO_UNIX;
-    strcpy(coordinator_shm->address, address);
-    return sock;
-}
-
 /**
  * Initialize coordinator:
  * 1. Create socket to listen request from QE
@@ -163,9 +146,11 @@ static int
 plc_initialize_coordinator(dsm_handle seg)
 {
 	BackgroundWorker auxWorker;
-	int sock;
 
-	sock = plc_listen_socket();
+    char address[1024] = {0};
+    snprintf(address, sizeof(address), "/tmp/.plcoordinator.%ld.unix.sock", (long)getpid());
+    coordinator_shm->protocol = CO_PROTO_UNIX;
+    strcpy(coordinator_shm->address, address);
 
 	if (plc_refresh_container_config(false) != 0) {
 		if (runtime_conf_table == NULL) {
@@ -186,94 +171,34 @@ plc_initialize_coordinator(dsm_handle seg)
 	auxWorker.bgw_notify_pid = 0;
 	snprintf(auxWorker.bgw_name, sizeof(auxWorker.bgw_name), "plcoordinator_aux");
 	RegisterDynamicBackgroundWorker(&auxWorker, NULL);
-	conn = (plcConn *) palloc(sizeof(plcConn));
-	plcConnInit(conn);
-	return sock;
-}
-
-static void process_msg_from_sock(int sock)
-{
-    struct sockaddr_un remote;
-	/* msg is what we receive from gpdb */
-	plcMessage *msg = NULL;
-	/*
-	 * container_msg is the message of our container creation result
-	 * it will be sent back to gpdb.
-	 */
-	plcMsgContainer *container_msg;
-    socklen_t len_addr = (socklen_t) sizeof(struct sockaddr_un);
-    int s2 = accept(sock, &remote, &len_addr);
-    if (s2 < 0) {
-        return;
-    }
-	conn->sock = s2;
-	int res = plcontainer_channel_receive(conn, &msg, MT_PLCID_BIT);
-	if (res < 0) {
-		elog(WARNING, "error in receiving request from QE");
-		goto clean;
-	}
-	container_msg = (plcMsgContainer *) palloc(sizeof(plcMsgContainer));
-	container_msg->msgtype = MT_PLC_CONTAINER;
-	plcMsgPLCId *mplc_id = (plcMsgPLCId *)msg;
-	elog(DEBUG1, "receive id msg from process %d", mplc_id->pid);
-	if (mplc_id->action < 0) {
-		destroy_container(mplc_id->pid, mplc_id->sessionid, mplc_id->ccnt);
-	} else {
-		container_msg->status = start_container(mplc_id->runtimeid, mplc_id->pid, mplc_id->sessionid, mplc_id->ccnt, &(container_msg->msg));
-		plcontainer_channel_send(conn, (plcMessage *)container_msg);
-	}
-clean:
-    if (shutdown(s2, 2) < 0)
-    {
-        elog(ERROR, "error in shutdown uds");
-    }
-    close(s2);
-}
-
-static int wait_for_msg(int sock) {
-    struct timeval timeout;
-    int rv;
-    fd_set fdset;
-
-    FD_ZERO(&fdset);    /* clear the set */
-    FD_SET(sock, &fdset); /* add our file descriptor to the set */
-    timeout.tv_sec = TIMEOUT_SEC;
-    timeout.tv_usec = 0;
-
-    rv = select(sock + 1, &fdset, NULL, NULL, &timeout);
-
-    if (rv == -1) {
-		if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
-		{
-			elog(LOG, "select() socket got error: %s", strerror(errno));
-			return 0;
-		}
-        elog(ERROR, "Failed to select() socket: %s", strerror(errno));
-    }
-    return 1;
+	return 0;
 }
 
 void
 plc_coordinator_main(Datum datum)
 {
-    int sock, rc;
+    int rc;
 	dsm_handle seg;
 
     (void)datum;
     pqsignal(SIGTERM, plc_coordinator_sigterm);
     pqsignal(SIGHUP, plc_coordinator_sighup);
 	seg = shm_message_queue_sender_init();
-    sock = plc_initialize_coordinator(seg);
+    plc_initialize_coordinator(seg);
     BackgroundWorkerUnblockSignals();
 
     coordinator_shm->state = CO_STATE_READY;
-    elog(INFO, "plcoordinator is going to enter main loop, sock=%d", sock);
+    elog(INFO, "plcoordinator is going to enter main loop");
 	if (plcontainer_stand_alone_mode) {
 		container_status_table = init_runtime_info_table();
 		if (container_status_table == NULL) {
 			elog(ERROR, "Failed to init container status hash table");
 		}
 	}
+
+    PLCoordinatorServer *server = start_server(coordinator_shm->address);
+    plc_elog(LOG, "server is started on address:%s", server->address);
+
     while (!got_sigterm) {
         ResetLatch(&MyProc->procLatch);
         if (got_sighup) {
@@ -283,9 +208,10 @@ plc_coordinator_main(Datum datum)
         if (rc & WL_POSTMASTER_DEATH)
             break;
 
-        if (wait_for_msg(sock) > 0) {
-            process_msg_from_sock(sock);
+        if (process_request(server, TIMEOUT_SEC) < 0) {
+            plc_elog(ERROR, "server process request error.");
         }
+
         if (plcontainer_stand_alone_mode) {
             update_containers_status();
         }
@@ -427,7 +353,7 @@ static int clear_container_info(ContainerKey *key)
 	return res;
 }
 
-static int start_container(const char *runtimeid, pid_t qe_pid, int session_id, int ccnt, char **uds_address)
+int start_container(const char *runtimeid, pid_t qe_pid, int session_id, int ccnt, char **uds_address)
 {
 	pid_t server_pid;
 	QeRequest *request;
@@ -486,7 +412,7 @@ static int start_container(const char *runtimeid, pid_t qe_pid, int session_id, 
 	}
 }
 
-static int destroy_container(pid_t qe_pid, int session_id, int ccnt)
+int destroy_container(pid_t qe_pid, int session_id, int ccnt)
 {
 	/* if we are in stand alone mode kill the process in coordinator to avoid defunct */
 	if (plcontainer_stand_alone_mode) {

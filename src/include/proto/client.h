@@ -1,6 +1,9 @@
 #ifndef __CLIENT_H__
 #define __CLIENT_H__
 
+#include <sys/types.h>
+#include <unistd.h>
+
 #include <chrono>
 #include <iostream>
 #include <memory>
@@ -23,6 +26,8 @@ extern "C"
 #include "mb/pg_wchar.h"
 #include "common/comm_dummy.h"
 #include "plc/containers.h"
+#include "plc/plc_coordinator.h"
+#include "cdb/cdbvars.h"
 }
 
 using namespace plcontainer;
@@ -61,6 +66,17 @@ private:
 
     PlcDataType GetDataType(const plcTypeInfo *type);
     bool isSetOf(const plcTypeInfo *type);
+};
+
+class PLCoordinatorClient {
+public:
+    PLCoordinatorClient(std::shared_ptr<grpc::Channel> channel);
+
+    void StartContainer(const StartContainerRequest &request, StartContainerResponse &response);
+    void StopContainer(const StopContainerRequest &request, StopContainerResponse &response);
+
+private:
+    std::unique_ptr<PLCoordinator::Stub> stub_;
 };
 
 #endif

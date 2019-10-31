@@ -25,6 +25,7 @@ void PLContainerClient::Init(const plcContext *ctx) {
 
 void PLContainerClient::FunctionCall(const CallRequest &request, CallResponse &response) {
     grpc::ClientContext context;
+    context.set_wait_for_ready(true);
     plc_elog(DEBUG1, "function call request:%s", request.DebugString().c_str());
     grpc::Status status = stub_->FunctionCall(&context, request, &response);
     plc_elog(DEBUG1, "function call response:%s", response.DebugString().c_str());
@@ -398,4 +399,42 @@ Datum plcontainer_function_handler(FunctionCallInfo fcinfo, plcProcInfo *proc, M
         plc_elog(ERROR, "plcontainer_function_handler not support fn_retset");
     }
     return datumreturn;
+}
+
+int get_new_container_from_coordinator(const char *runtime_id, plcContext *ctx) {
+    (void) runtime_id;
+    StartContainerRequest   request;
+    StartContainerResponse  response;
+
+    std::string server_addr = get_coordinator_address();
+    PLCoordinatorClient     client(grpc::CreateChannel(
+      "unix://"+server_addr, grpc::InsecureChannelCredentials()));
+
+    request.set_runtime_id(runtime_id);
+    request.set_qe_pid(getpid());
+    request.set_session_id(gp_session_id);
+    request.set_command_count(gp_command_count);
+    client.StartContainer(request, response);
+    ctx->service_address = plc_top_strdup(response.container_address().c_str());
+    return 0;
+}
+
+PLCoordinatorClient::PLCoordinatorClient(std::shared_ptr<grpc::Channel> channel) {
+    this->stub_ = PLCoordinator::NewStub(channel);
+}
+
+void PLCoordinatorClient::StartContainer(const StartContainerRequest &request, StartContainerResponse &response) {
+    grpc::ClientContext context;
+    plc_elog(DEBUG1, "StartContainer request:%s", request.DebugString().c_str());
+    grpc::Status status = stub_->StartContainer(&context, request, &response);
+    plc_elog(DEBUG1, "StartContainer response:%s", response.DebugString().c_str());
+    plc_elog(DEBUG1, "StartContainer finished with status %d", status.error_code());
+}
+
+void PLCoordinatorClient::StopContainer(const StopContainerRequest &request, StopContainerResponse &response) {
+    grpc::ClientContext context;
+    plc_elog(DEBUG1, "StopContainer request:%s", request.DebugString().c_str());
+    grpc::Status status = stub_->StopContainer(&context, request, &response);
+    plc_elog(DEBUG2, "StopContainer response:%s", response.DebugString().c_str());
+    plc_elog(DEBUG1, "StopContainer finished with status %d", status.error_code());
 }
