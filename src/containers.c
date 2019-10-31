@@ -35,8 +35,9 @@
 #include "plc/plc_configuration.h"
 #include "plc/containers.h"
 #include "plc/message_fns.h"
+#include "plc/plc_coordinator.h"
 
-
+#include "interface.h"
 
 typedef struct {
 	char *runtimeid;
@@ -49,8 +50,8 @@ static container_t containers[MAX_CONTAINER_NUMBER];
 static int containers_size = 0;
 static CoordinatorStruct *coordinator_shm;
 static int check_runtime_id(const char *id);
-static char *get_coordinator_address(void);
-static int get_new_container_from_coordinator(const char *runtime_id, plcContext *ctx);
+//static char *get_coordinator_address(void);
+//static int get_new_container_from_coordinator(const char *runtime_id, plcContext *ctx);
 static plcContext *get_new_container_ctx(const char *runtime_id);
 //static int init_container_connection(plcContext *ctx);
 static void insert_container_ctx(const char *runtime_id, plcContext *ctx, int slot);
@@ -124,6 +125,7 @@ static plcContext *get_new_container_ctx(const char *runtime_id)
 }
 
 /* TODO: using emun to instead of int? */
+/*
 static int get_new_container_from_coordinator(const char *runtime_id, plcContext *ctx)
 {
 	plcConn *conn; // a connection used to connect to coordinator
@@ -139,10 +141,10 @@ static int get_new_container_from_coordinator(const char *runtime_id, plcContext
 
 	conn = (plcConn*) palloc0(sizeof(plcConn));
 	plcConnInit(conn);
-	/* current only uds is supported */
+	// current only uds is supported
 	conn->sock = plcDialToServer("unix", get_coordinator_address());
 
-	/* send message to coordinator */
+	// send message to coordinator
 	res = plcontainer_channel_send(conn, (plcMessage *) mplc_id);
 	if (res < 0) {
 		plc_elog(ERROR, "Error sending plc id to coordinator");
@@ -164,11 +166,12 @@ static int get_new_container_from_coordinator(const char *runtime_id, plcContext
 	}
 
 	pfree(mplc_id);
-	/* release the connection */
+	// release the connection
 	plcDisconnect(conn);
 
 	return ret;
 }
+*/
 
 int plcontainer_delete_container()
 {
@@ -276,7 +279,7 @@ int plcontainer_delete_container()
 // }
 
 // TODO: read shm to get the address of coordinator
-static char *get_coordinator_address(void) {
+char *get_coordinator_address(void) {
 	bool found;
 	coordinator_shm = ShmemInitStruct(CO_SHM_KEY, MAXALIGN(sizeof(CoordinatorStruct)), &found);
 	Assert(found);

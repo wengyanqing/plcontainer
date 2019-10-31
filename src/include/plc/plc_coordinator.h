@@ -25,4 +25,8 @@ typedef struct ContainerEntry
 	char* 			status;
 } ContainerEntry;
 
+extern char *get_coordinator_address(void);
+extern int start_container(const char *runtimeid, pid_t qe_pid, int session_id, int ccnt, char **uds_address);
+extern int destroy_container(pid_t qe_pid, int session_id, int ccnt);
+
 #endif /* _CO_COORDINATOR_H */
