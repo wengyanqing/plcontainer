@@ -65,8 +65,6 @@ extern plcProcInfo *plcontainer_procedure_get(FunctionCallInfo fcinfo);
 
 extern void free_proc_info(plcProcInfo *proc);
 
-extern plcMsgCallreq *plcontainer_generate_call_request(FunctionCallInfo fcinfo, plcProcInfo *pinfo);
-
 extern void *top_palloc(size_t bytes);
 extern char *plc_top_strdup(const char *str);
 

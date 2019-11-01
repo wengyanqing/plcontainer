@@ -48,49 +48,6 @@ static void free_type(plcType *typArr) {
 	}
 }
 
-void free_arguments(plcArgument *args, int nargs, bool isShared, bool isSender) {
-	int i;
-
-	for (i = 0; i < nargs; i++) {
-		if (!isShared && args[i].name != NULL) {
-			pfree(args[i].name);
-		}
-		if (args[i].data.value != NULL) {
-			// For UDT we need to free up internal structures
-			if (args[i].type.type == PLC_DATA_UDT) {
-				plc_free_udt((plcUDT *) args[i].data.value, &args[i].type, isSender);
-			}
-
-			/* For arrays on receiver side we need to free up their data,
-			 * while on the sender side cleanup is managed by comm_channel */
-			if (!isSender && args[i].type.type == PLC_DATA_ARRAY) {
-				plc_free_array((plcArray *) args[i].data.value, &args[i].type, isSender);
-			} else {
-				pfree(args[i].data.value);
-			}
-		}
-		free_type(&args[i].type);
-	}
-
-	if (args)
-		pfree(args);
-}
-
-void free_callreq(plcMsgCallreq *req, bool isShared, bool isSender) {
-	if (!isShared) {
-		/* free the procedure */
-		pfree(req->proc.name);
-		pfree(req->proc.src);
-	}
-
-	free_arguments(req->args, req->nargs, isShared, isSender);
-
-	free_type(&req->retType);
-
-	/* free the top-level request */
-	pfree(req);
-}
-
 void free_result(plcMsgResult *res, bool isSender) {
 	uint32_t i, j;
 

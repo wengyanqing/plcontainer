@@ -42,7 +42,7 @@ static int message_end(plcConn *conn);
 static int send_char(plcConn *conn, char c);
 static int send_int16(plcConn *conn, int16_t i);
 static int send_int32(plcConn *conn, int32_t i);
-static int send_uint32(plcConn *conn, uint32_t i);
+//static int send_uint32(plcConn *conn, uint32_t i);
 static int send_int64(plcConn *conn, int64_t i);
 static int send_float4(plcConn *conn, float f);
 static int send_float8(plcConn *conn, double f);
@@ -68,9 +68,6 @@ static int receive_array(plcConn *conn, plcType *type, rawdata *obj);
 static int receive_type(plcConn *conn, plcType *type);
 static int receive_udt(plcConn *conn, plcType *type, char **resdata);
 static int send_argument(plcConn *conn, plcArgument *arg);
-static int send_ping(plcConn *conn);
-static int send_call(plcConn *conn, plcMsgCallreq *call);
-static int send_plcid(plcConn *conn, plcMsgPLCId *id);
 static int send_result(plcConn *conn, plcMsgResult *res);
 static int send_log(plcConn *conn, plcMsgLog *mlog);
 static int send_quote(plcConn *conn, plcMsgQuote *mquote);
@@ -84,7 +81,6 @@ static int send_sql_prepare(plcConn *conn, plcMsgSQL *msg);
 static int send_sql_unprepare(plcConn *conn, plcMsgSQL *msg);
 static int send_sql_pexecute(plcConn *conn, plcMsgSQL *msg);
 static int send_rawmsg(plcConn *conn, plcMsgRaw *msg);
-static int send_plccontainer(plcConn *conn, plcMsgContainer *mcontainer);
 static int receive_exception(plcConn *conn, plcMessage **mExc);
 static int receive_result(plcConn *conn, plcMessage **mRes);
 static int receive_log(plcConn *conn, plcMessage **mLog);
@@ -96,12 +92,8 @@ static int receive_sql_pexecute(plcConn *conn, plcMessage **mStmt);
 static int receive_subtransaction(plcConn *conn, plcMessage **mSub);
 static int receive_subtransaction_result(plcConn *conn, plcMessage **mSubr);
 static int receive_argument(plcConn *conn, plcArgument *arg);
-static int receive_ping(plcConn *conn, plcMessage **mPing);
-static int receive_call(plcConn *conn, plcMessage **mCall);
 static int receive_sql(plcConn *conn, plcMessage **mSql);
 static int receive_rawmsg(plcConn *conn, plcMessage **mRaw);
-static int receive_plcid(plcConn *conn, plcMessage **mPlcId);
-static int receive_plc_container(plcConn *conn, plcMessage **mContainer);
 
 /* Public API Functions */
 
@@ -109,12 +101,6 @@ int plcontainer_channel_send(plcConn *conn, plcMessage *msg) {
 	int res;
 	plc_elog(DEBUG1, "start to send data, type is %c", msg->msgtype);
 	switch (msg->msgtype) {
-		case MT_PING:
-			res = send_ping(conn);
-			break;
-		case MT_CALLREQ:
-			res = send_call(conn, (plcMsgCallreq *) msg);
-			break;
 		case MT_RESULT:
 			res = send_result(conn, (plcMsgResult *) msg);
 			break;
@@ -142,12 +128,6 @@ int plcontainer_channel_send(plcConn *conn, plcMessage *msg) {
 		case MT_SUBTRANSACTION:
 			res = send_subtransaction(conn, (plcMsgSubtransaction *) msg);
 			break;
-		case MT_PLCID:
-			res = send_plcid(conn, (plcMsgPLCId *)msg);
-			break;
-		case MT_PLC_CONTAINER:
-			res = send_plccontainer(conn, (plcMsgContainer*)msg);
-			break;
 		default:
 			plc_elog(ERROR, "UNHANDLED MESSAGE: '%c'", msg->msgtype);
 			res = -1;
@@ -168,16 +148,6 @@ int plcontainer_channel_receive(plcConn *conn, plcMessage **msg, int64_t mask) {
 	plc_elog(DEBUG1, "start to receive data, type is %c, res is %d", cType, res);
 	if (res >= 0) {
 		switch (cType) {
-			case MT_PING:
-				if (!(mask & MT_PING_BIT))
-					goto unexpected_type;
-				res = receive_ping(conn, msg);
-				break;
-			case MT_CALLREQ:
-				if (!(mask & MT_CALLREQ_BIT))
-					goto unexpected_type;
-				res = receive_call(conn, msg);
-				break;
 			case MT_RESULT:
 				if (!(mask & MT_RESULT_BIT))
 					goto unexpected_type;
@@ -223,16 +193,6 @@ int plcontainer_channel_receive(plcConn *conn, plcMessage **msg, int64_t mask) {
 					goto unexpected_type;
 				res = receive_subtransaction_result(conn, msg);
 				break;
-			case MT_PLCID:
-				if (!(mask & MT_PLCID_BIT))
-					goto unexpected_type;
-				res = receive_plcid(conn, msg);
-				break;
-			case MT_PLC_CONTAINER:
-				if (!(mask & MT_PLC_CONTAINER_BIT))
-					goto unexpected_type;
-				res = receive_plc_container(conn, msg);
-				break;
 			default:
 				plc_elog(ERROR, "unknown message type: %d / '%c'", (int) cType, cType);
 				*msg = NULL;
@@ -274,12 +234,12 @@ static int send_int32(plcConn *conn, int32_t i) {
 	channel_elog(WARNING, "    ===> sending int32_t '%d'", i);
 	return plcBufferAppend(conn, (char *) &i, 4);
 }
-
+/* TODO not used, will remove later
 static int send_uint32(plcConn *conn, uint32_t i) {
 	channel_elog(WARNING, "    ===> sending uint32_t '%u'", i);
 	return plcBufferAppend(conn, (char *) &i, 4);
 }
-
+*/
 static int send_int64(plcConn *conn, int64_t i) {
 	channel_elog(WARNING, "    ===> sending int64_t '" INT64_FORMAT "'", i);
 	return plcBufferAppend(conn, (char *) &i, 8);
@@ -702,50 +662,6 @@ static int send_argument(plcConn *conn, plcArgument *arg) {
 	return res;
 }
 
-static int send_ping(plcConn *conn) {
-	int res = 0;
-
-	channel_elog(WARNING, "Sending ping message");
-	res |= message_start(conn, MT_PING);
-	res |= send_cstring(conn, PLCONTAINER_VERSION);
-	res |= message_end(conn);
-	channel_elog(WARNING, "Finished ping message");
-	return res;
-}
-
-static int send_call(plcConn *conn, plcMsgCallreq *call) {
-	int res = 0;
-	int i;
-
-	channel_elog(WARNING, "Sending call request for function '%s'", call->proc.name);
-	res |= message_start(conn, MT_CALLREQ);
-	res |= send_cstring(conn, call->proc.name);
-	channel_elog(WARNING, "Function source code:");
-	channel_elog(WARNING, "%s", call->proc.src);
-	res |= send_cstring(conn, call->proc.src);
-	channel_elog(WARNING, "db encoding %s", call->serverenc);
-	res |= send_cstring(conn, call->serverenc);
-	channel_elog(WARNING, "Log level is %d", call->logLevel);
-	res |=send_int32(conn, call->logLevel);
-	channel_elog(WARNING, "Function OID is '%u'", call->objectid);
-	res |= send_uint32(conn, call->objectid);
-	channel_elog(WARNING, "Function has changed is '%d'", call->hasChanged);
-	res |= send_int32(conn, call->hasChanged);
-	channel_elog(WARNING, "Function return type is '%s'", plc_get_type_name(call->retType.type));
-	res |= send_type(conn, &call->retType);
-	channel_elog(WARNING, "Function is set-returning: %d", (int) call->retset);
-	res |= send_int32(conn, call->retset);
-	channel_elog(WARNING, "Function number of arguments is '%d'", call->nargs);
-	res |= send_int32(conn, call->nargs);
-
-	for (i = 0; i < call->nargs; i++)
-		res |= send_argument(conn, &call->args[i]);
-
-	res |= message_end(conn);
-	channel_elog(WARNING, "Finished call request for function '%s'", call->proc.name);
-	return res;
-}
-
 static int send_result(plcConn *conn, plcMsgResult *ret) {
 	int res = 0;
 	uint32_t i, j;
@@ -960,31 +876,6 @@ static int send_rawmsg(plcConn *conn, plcMsgRaw *msg) {
 	return res;
 }
 
-static int send_plcid(plcConn *conn, plcMsgPLCId *mid) {
-	int res = 0;
-
-	channel_elog(WARNING, "Sending plc id to backend");
-	res |= message_start(conn, MT_PLCID);
-	res |= send_int32(conn, mid->sessionid);
-	res |= send_int32(conn, mid->pid);
-	res |= send_int32(conn, mid->ccnt);
-	res |= send_int32(conn, mid->action);
-	res |= send_cstring(conn, mid->runtimeid);
-	res |= message_end(conn);
-	channel_elog(WARNING, "Finished sending plc id message");
-	return res;
-}
-static int send_plccontainer(plcConn *conn, plcMsgContainer *mcontainer) {
-	int res = 0;
-
-	channel_elog(WARNING, "Sending plc container to backend");
-	res |= message_start(conn, MT_PLC_CONTAINER);
-	res |= send_int32(conn, mcontainer->status);
-	res |= send_cstring(conn, mcontainer->msg);
-	res |= message_end(conn);
-	channel_elog(WARNING, "Finished sending plc container message");
-	return res;
-}
 /* Receive Functions for the Main Engine */
 
 static int receive_exception(plcConn *conn, plcMessage **mExc) {
@@ -1228,69 +1119,6 @@ static int receive_argument(plcConn *conn, plcArgument *arg) {
 	return res;
 }
 
-static int receive_ping(plcConn *conn, plcMessage **mPing) {
-	int res = 0;
-	char *version;
-
-	*mPing = (plcMessage *) palloc(sizeof(plcMsgPing));
-	((plcMsgPing *) *mPing)->msgtype = MT_PING;
-
-	channel_elog(WARNING, "Receiving ping message");
-	res |= receive_cstring(conn, &version);
-	if (res == 0) {
-		if (strncmp(version, PLCONTAINER_VERSION, strlen(PLCONTAINER_VERSION)) != 0) {
-			plc_elog(ERROR, "Version mismatch (require '%s' but get '%s')", PLCONTAINER_VERSION, version);
-			res = -1;
-		}
-		pfree(version);
-	}
-
-	channel_elog(WARNING, "Finished receiving ping message");
-	return res;
-}
-
-static int receive_call(plcConn *conn, plcMessage **mCall) {
-	int res = 0;
-	int i;
-	plcMsgCallreq *req;
-
-	*mCall = palloc(sizeof(plcMsgCallreq));
-	req = (plcMsgCallreq *) *mCall;
-	req->msgtype = MT_CALLREQ;
-	res |= receive_cstring(conn, &req->proc.name);
-	channel_elog(WARNING, "Receiving call request for function '%s'", req->proc.name);
-	res |= receive_cstring(conn, &req->proc.src);
-	channel_elog(WARNING, "Function source code:");
-	channel_elog(WARNING, "%s", req->proc.src);
-	res |= receive_cstring(conn, &req->serverenc);
-	channel_elog(WARNING, "db encoding %s", req->serverenc);
-	res |= receive_int32(conn, &req->logLevel);
-	channel_elog(WARNING, "Receiving Log level %d",req->logLevel);
-	res |= receive_uint32(conn, &req->objectid);
-	channel_elog(WARNING, "Function OID is '%u'", req->objectid);
-	res |= receive_int32(conn, &req->hasChanged);
-	channel_elog(WARNING, "Function has changed is '%d'", req->hasChanged);
-	res |= receive_type(conn, &req->retType);
-	channel_elog(WARNING, "Function return type is '%s'", plc_get_type_name(req->retType.type));
-	res |= receive_int32(conn, &req->retset);
-	channel_elog(WARNING, "Function is set-returning: %d", (int) req->retset);
-	res |= receive_int32(conn, &req->nargs);
-	channel_elog(WARNING, "Function number of arguments is '%d'", req->nargs);
-	if (res == 0) {
-		req->args = NULL;
-		if (req->nargs > 0) {
-			req->args = palloc(sizeof(*req->args) * req->nargs);
-			for (i = 0; i < req->nargs && res == 0; i++)
-				res |= receive_argument(conn, &req->args[i]);
-		} else if (req->nargs < 0) {
-			plc_elog(LOG, "function call with nargs (%d) < 0", req->nargs);
-			return -1;
-		}
-	}
-	channel_elog(WARNING, "Finished call request for function '%s'", req->proc.name);
-	return res;
-}
-
 static int receive_sql(plcConn *conn, plcMessage **mSql) {
 	int res = 0;
 	int sqlType;
@@ -1356,35 +1184,4 @@ void fill_prepare_argument(plcArgument *arg, char *str, plcDatatype plcData) {
 	arg->name = NULL;
 	arg->data.isnull = 1;
 	arg->data.value = NULL;
-}
-
-static int receive_plcid(plcConn *conn, plcMessage **mPlcId) {
-	int res = 0;
-	plcMsgPLCId *ret;
-
-	channel_elog(WARNING, "Receiving plc id message");
-	*mPlcId = palloc(sizeof(plcMsgPLCId));
-	ret = (plcMsgPLCId *) *mPlcId;
-	ret->msgtype = MT_PLCID;
-	res |= receive_int32(conn, &(ret->sessionid));
-	res |= receive_int32(conn, &(ret->pid));
-	res |= receive_int32(conn, &(ret->ccnt));
-	res |= receive_int32(conn, &(ret->action));
-	res |= receive_cstring(conn, &(ret->runtimeid));
-	channel_elog(WARNING, "Finished receiving id message");
-	return res;
-}
-
-static int receive_plc_container(plcConn *conn, plcMessage **mContainer) {
-	int res = 0;
-	plcMsgContainer *ret;
-
-	channel_elog(WARNING, "Receiving plc container message");
-	*mContainer = palloc(sizeof(plcMsgContainer));
-	ret = (plcMsgContainer *) *mContainer;
-	ret->msgtype = MT_PLC_CONTAINER;
-	res |= receive_int32(conn, &(ret->status));
-	res |= receive_cstring(conn, &(ret->msg));
-	channel_elog(WARNING, "Finished receiving container message");
-	return res;
 }

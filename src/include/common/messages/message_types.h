@@ -10,12 +10,9 @@
 
 #define MT_CALLREQ        'C'
 #define MT_EXCEPTION      'E'
-#define MT_PLCID          'I'
-#define MT_PLC_CONTAINER  'A'
 #define MT_LOG            'L'
 #define MT_QUOTE          'Q'
 #define MT_QUOTE_RESULT   'O'
-#define MT_PING           'P'
 #define MT_RESULT         'R'
 #define MT_SQL            'S'
 #define MT_TRIGREQ        'T'
@@ -29,7 +26,6 @@
 #define MT_CALLREQ_BIT        0x1LL
 #define MT_EXCEPTION_BIT      0x2LL
 #define MT_LOG_BIT            0x4LL
-#define MT_PING_BIT           0x8LL
 #define MT_RESULT_BIT         0x10LL
 #define MT_SQL_BIT            0x20LL
 #define MT_TRIGREQ_BIT        0x40LL
@@ -41,8 +37,6 @@
 #define MT_EOF_BIT            0x1000LL
 #define MT_QUOTE_BIT          0x2000LL
 #define MT_QUOTE_RESULT_BIT   0x4000LL
-#define MT_PLCID_BIT		  0x8000LL
-#define MT_PLC_CONTAINER_BIT  0x10000LL
 
 #define MT_ALL_BITS        0xFFFFffffFFFFffffLL
 

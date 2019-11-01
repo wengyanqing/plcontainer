@@ -10,7 +10,6 @@ EXTENSION = plcontainer
 # Directories
 SRCDIR = ./src
 MGMTDIR = ./management
-PYCLIENTDIR = src/pyclient/bin
 RCLIENTDIR = src/rclient/bin
 
 # the DATA is including files for extension use
@@ -148,7 +147,6 @@ install-extra: installdirs
 .PHONY: install-clients
 install-clients:
 	$(MKDIR_P) '$(DESTDIR)$(bindir)/plcontainer_clients'
-	cp $(PYCLIENTDIR)/* $(DESTDIR)$(bindir)/plcontainer_clients/
 	cp $(RCLIENTDIR)/*  $(DESTDIR)$(bindir)/plcontainer_clients/
 
 .PHONY: installcheck
@@ -157,12 +155,10 @@ installcheck:
 
 .PHONY: build-clients
 build-clients:
-	CC='$(CC)' CFLAGS='$(CLIENT_CFLAGS)' LDFLAGS='$(CLIENT_LDFLAGS)' $(MAKE) -C $(SRCDIR)/pyclient all
 	CC='$(CC)' CFLAGS='$(CLIENT_CFLAGS)' LDFLAGS='$(CLIENT_LDFLAGS)' $(MAKE) -C $(SRCDIR)/rclient all
 
 .PHONY: clean-clients
 clean-clients:
-	$(MAKE) -C $(SRCDIR)/pyclient clean
 	$(MAKE) -C $(SRCDIR)/rclient clean
 
 .PHONY: clean-coverage

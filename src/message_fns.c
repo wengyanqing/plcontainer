@@ -70,8 +70,6 @@ static bool plc_procedure_valid(plcProcInfo *proc, HeapTuple procTup);
 
 static bool plc_type_valid(plcTypeInfo *type);
 
-static void fill_callreq_arguments(FunctionCallInfo fcinfo, plcProcInfo *proc, plcMsgCallreq *req);
-
 void *top_palloc(size_t bytes) {
 	/* We need our allocations to be long-lived, so use TopMemoryContext */
 	return MemoryContextAlloc(TopMemoryContext, bytes);
@@ -263,32 +261,6 @@ void free_proc_info(plcProcInfo *proc) {
 	pfree(proc);
 }
 
-plcMsgCallreq *plcontainer_generate_call_request(FunctionCallInfo fcinfo, plcProcInfo *proc) {
-	plcMsgCallreq *req;
-
-	req = palloc(sizeof(plcMsgCallreq));
-	req->msgtype = MT_CALLREQ;
-	req->proc.name = proc->name;
-	req->proc.src = proc->src;
-	req->logLevel = log_min_messages;
-	req->objectid = proc->funcOid;
-	req->hasChanged = proc->hasChanged;
-	/*
-	 * Python understands almost all PostgreSQL encoding names, but it doesn't
-	 * know SQL_ASCII.
-	 * TODO: should send db encoding for every query
-	 */
-	if (GetDatabaseEncoding() == PG_SQL_ASCII)
-		req->serverenc = (char*)"ascii";
-	else
-		req->serverenc = (char*)GetDatabaseEncodingName();
-	copy_type_info(&req->retType, &proc->result);
-
-	fill_callreq_arguments(fcinfo, proc, req);
-
-	return req;
-}
-
 static bool plc_type_valid(plcTypeInfo *type) {
 	bool valid = true;
 	int i;
@@ -350,25 +322,4 @@ static bool plc_procedure_valid(plcProcInfo *proc, HeapTuple procTup) {
 		}
 	}
 	return valid;
-}
-
-static void fill_callreq_arguments(FunctionCallInfo fcinfo, plcProcInfo *proc, plcMsgCallreq *req) {
-	int i;
-
-	req->nargs = proc->nargs;
-	req->retset = proc->retset;
-	req->args = palloc(sizeof(*req->args) * proc->nargs);
-
-	for (i = 0; i < proc->nargs; i++) {
-		req->args[i].name = proc->argnames[i];
-		copy_type_info(&req->args[i].type, &proc->args[i]);
-
-		if (fcinfo->argnull[i]) {
-			req->args[i].data.isnull = 1;
-			req->args[i].data.value = NULL;
-		} else {
-			req->args[i].data.isnull = 0;
-			req->args[i].data.value = proc->args[i].outfunc(fcinfo->arg[i], &proc->args[i]);
-		}
-	}
 }
