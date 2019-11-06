@@ -416,5 +416,6 @@ void plcContextReset(plcContext *ctx)
 void plcFreeContext(plcContext *ctx)
 {
 	plcReleaseContext(ctx);
+	pfree(ctx->service_address);
 	pfree(ctx);
 }
