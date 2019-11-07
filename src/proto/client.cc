@@ -30,8 +30,10 @@ void PLContainerClient::FunctionCall(const CallRequest &request, CallResponse &r
     grpc::Status status = stub_->FunctionCall(&context, request, &response);
     plc_elog(DEBUG1, "function call response:%s", response.DebugString().c_str());
     if (!status.ok()) {
+        plc_elog(ERROR, "plcontainer function call RPC failed., error:%s", status.error_message().c_str());
+    } else if (response.has_exception()) {
         Error *error = response.mutable_exception();
-        error->set_message(status.error_message());
+        plc_elog(ERROR, "plcontainer function call failed. error:%s stacktrace:%s", error->message().c_str(), error->stacktrace().c_str());
     }
     plc_elog(DEBUG1, "PLContainerClient function call finished with status %d", status.error_code());
 }

@@ -99,7 +99,6 @@ static plcContext *get_new_container_ctx(const char *runtime_id)
 	/* TODO: the initialize refactor? */
 	ctx = (plcContext*) top_palloc(sizeof(plcContext));
 	plcContextInit(ctx);
-	ctx->service_address = (char *)top_palloc(MAX_ADDRESS_LENGTH);
 	res = get_new_container_from_coordinator(runtime_id, ctx);
 	if (res != 0){
 		/* TODO: Using errors instead of elog */
