@@ -551,7 +551,7 @@ static int start_stand_alone_process(const char* uds_address)
 
 	pid = fork();
 	if (pid == 0)
-		execl(plcontainer_stand_alone_server_path, plcontainer_stand_alone_server_path, uds_address, NULL);
+		execl(plcontainer_stand_alone_server_path, plcontainer_stand_alone_server_path, "1", uds_address, NULL);
 	else if (pid < 0)
 		elog(WARNING, "Can not start server %s in debug mode", plcontainer_stand_alone_server_path);
 

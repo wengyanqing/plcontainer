@@ -48,8 +48,6 @@ public:
     Datum GetCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const CallResponse &response);
 
 private: 
-    void SetScalarValue(ScalarData &data, const char *name, bool isnull, const plcTypeInfo *type, const char *value);
-
     void InitCallRequestArgument(const FunctionCallInfo fcinfo, const plcProcInfo *proc, int argIdx, ScalarData &arg);
     void InitCallRequestArgument(const FunctionCallInfo fcinfo, const plcProcInfo *proc, int argIdx, ArrayData &arg);
     void InitCallRequestArgument(const FunctionCallInfo fcinfo, const plcProcInfo *proc, int argIdx, CompositeData &arg);
@@ -60,12 +58,13 @@ private:
     Datum GetCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const CompositeData &response);
     Datum GetCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const SetOfData &response);
 
+    static std::string functionCallInfoToStr(const FunctionCallInfo fcinfo);
+    static std::string procInfoToStr(const plcProcInfo *proc);
+    static std::string typeInfoToStr(const plcTypeInfo *type);
 private:
+
     std::unique_ptr<PLContainer::Stub> stub_;
     const plcContext  *ctx;
-
-    PlcDataType GetDataType(const plcTypeInfo *type);
-    bool isSetOf(const plcTypeInfo *type);
 };
 
 class PLCoordinatorClient {

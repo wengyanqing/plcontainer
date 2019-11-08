@@ -12,7 +12,7 @@ FILES = plc_coordinator.c containers.c message_fns.c plc_configuration.c \
         common/comm_dummy_plc.c common/comm_messages.c
 OBJS = $(foreach src,$(FILES),$(subst .c,.o,$(src)))
 
-CXX_FILES=proto/async_server.cc proto/client.cc proto/plcontainer.pb.cc proto/plcontainer.grpc.pb.cc
+CXX_FILES=proto/async_server.cc proto/client.cc proto/proto_utils.cc proto/plcontainer.pb.cc proto/plcontainer.grpc.pb.cc
 OBJS += $(foreach src,$(CXX_FILES),$(subst .cc,.o,$(src)))
 
 override SHLIB_LINK += $(shell pkg-config --libs json-c)

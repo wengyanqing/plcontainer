@@ -39,6 +39,8 @@
 #include "plc/plc_typeio.h"
 #include "plc/message_fns.h"
 
+#include "interface.h"
+
 static void fill_type_info_inner(FunctionCallInfo fcinfo, Oid typeOid, plcTypeInfo *type,
                                  bool isArrayElement, bool isUDTElement);
 
@@ -66,7 +68,7 @@ static void plc_backend_array_free(plcIterator *iter);
 
 static rawdata *plc_backend_array_next(plcIterator *self);
 
-static char *plc_datum_as_udt(Datum input, plcTypeInfo *type);
+//static char *plc_datum_as_udt(Datum input, plcTypeInfo *type);
 
 static Datum plc_datum_from_int1(char *input, plcTypeInfo *type);
 
@@ -475,6 +477,7 @@ rec_data.t_tableOid = InvalidOid;
 rec_data.t_data = rec_header;
 vattr = heap_getattr(&rec_data, (i + 1), type->tupleDesc, &isnull);
 */
+/*
 static char *plc_datum_as_udt(Datum input, plcTypeInfo *type) {
 	HeapTupleHeader rec_header;
 	plcUDT *res;
@@ -509,7 +512,7 @@ static char *plc_datum_as_udt(Datum input, plcTypeInfo *type) {
 
 	return (char *) res;
 }
-
+*/
 static Datum plc_datum_from_int1(char *input, pg_attribute_unused() plcTypeInfo *type) {
 	return BoolGetDatum(*((bool *) input));
 }

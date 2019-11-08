@@ -1,4 +1,5 @@
 #include "client.h"
+#include "proto_utils.h"
 
 PLContainerClient::PLContainerClient(std::shared_ptr<grpc::Channel> channel) {
     this->stub_ = PLContainer::NewStub(channel);
@@ -38,110 +39,12 @@ void PLContainerClient::FunctionCall(const CallRequest &request, CallResponse &r
     plc_elog(DEBUG1, "PLContainerClient function call finished with status %d", status.error_code());
 }
 
-bool PLContainerClient::isSetOf(const plcTypeInfo *type) {
-    int validSubTypes = 0;
-    int validSubTypeIdx = -1;
-    for (int i=0;i<type->nSubTypes;i++) {
-        if (!type->subTypes[i].attisdropped) {
-            validSubTypes += 1;
-            validSubTypeIdx = i;
-        }
-    }
-
-    if (type->type == PLC_DATA_ARRAY
-        && validSubTypes == 1
-        && type->subTypes[validSubTypeIdx].type == PLC_DATA_UDT) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-
-PlcDataType PLContainerClient::GetDataType(const plcTypeInfo *type) {
-    PlcDataType ret = UNKNOWN;
-    switch (type->type) {
-    case PLC_DATA_INT1:
-        ret = LOGICAL;
-        break;
-    case PLC_DATA_INT2:
-    case PLC_DATA_INT4:
-        ret = INT;
-        break;
-    case PLC_DATA_INT8:
-    case PLC_DATA_FLOAT4:
-    case PLC_DATA_FLOAT8:
-        ret = REAL;
-        break;
-    case PLC_DATA_TEXT:
-        ret = TEXT;
-        break;
-    case PLC_DATA_BYTEA:
-        ret = BYTEA;
-        break;
-    case PLC_DATA_ARRAY:
-        ret = ARRAY;
-        break;
-    case PLC_DATA_UDT:
-        ret = COMPOSITE;
-        break;
-    default:
-        plc_elog(ERROR, "unknown data type %d of plcType", type->type);
-    }
-
-    if (this->isSetOf(type)) {
-        ret = SETOF;
-    }
- 
-    return ret;
-}
-
-void PLContainerClient::SetScalarValue(ScalarData &data, const char *name, bool isnull, const plcTypeInfo *type, const char *value) {
-    data.set_type(this->GetDataType(type));
-    if (name) {
-        data.set_name(name);
-    } else {
-        data.set_name("");
-    }
-
-    data.set_isnull(isnull);
-    switch (type->type) {
-       case PLC_DATA_INT1:
-            data.set_logicalvalue(*(int8_t *)value); 
-            break;
-        case PLC_DATA_INT2:
-            data.set_intvalue(*(int16_t *)value); 
-            break;
-        case PLC_DATA_INT4:
-            data.set_intvalue(*(int32_t *)value);
-            break; 
-        case PLC_DATA_FLOAT4:
-            data.set_realvalue(*(float *)value);
-            break;
-        case PLC_DATA_INT8:
-            data.set_realvalue(*(int64_t *)value);
-            break;
-        case PLC_DATA_FLOAT8:
-            data.set_realvalue(*(double *)value);
-            break;
-        case PLC_DATA_TEXT:
-            data.set_stringvalue(value);
-            break;
-        case PLC_DATA_BYTEA:
-            // int32_length + data
-            data.set_byteavalue(value+sizeof(int32_t), *((int32_t *)(value)));
-            break;
-        default:
-            plc_elog(ERROR, "invalid data type %d in sclar data", type->type);
-    }
-}
-
 void PLContainerClient::InitCallRequestArgument(const FunctionCallInfo fcinfo, const plcProcInfo *proc, int argIdx, ScalarData &arg) {
-    this->SetScalarValue(arg,
+    PLContainerProtoUtils::SetScalarValue(arg,
                         proc->argnames[argIdx],
                         fcinfo->argnull[argIdx],
                         &proc->args[argIdx],
-                        proc->args[argIdx].outfunc(fcinfo->arg[argIdx], &proc->args[argIdx]));
+                        fcinfo->argnull[argIdx] ? NULL : proc->args[argIdx].outfunc(fcinfo->arg[argIdx], &proc->args[argIdx]));
 }
 
 void PLContainerClient::InitCallRequestArgument(const FunctionCallInfo fcinfo, const plcProcInfo *proc, int argIdx, ArrayData &arg) {
@@ -153,10 +56,22 @@ void PLContainerClient::InitCallRequestArgument(const FunctionCallInfo fcinfo, c
 }
 
 void PLContainerClient::InitCallRequestArgument(const FunctionCallInfo fcinfo, const plcProcInfo *proc, int argIdx, CompositeData &arg) {
-    (void) fcinfo;
-    (void) proc;
-    (void) argIdx;
-    (void) arg;
+    if (proc->argnames[argIdx]) {
+        arg.set_name(proc->argnames[argIdx]);
+    } else {
+        arg.set_name("");
+    }
+     
+    if (!fcinfo->argnull[argIdx]) {
+        char *argvalue = proc->args[argIdx].outfunc(fcinfo->arg[argIdx], &proc->args[argIdx]);
+        int size = *(int *)argvalue;
+        if (!arg.ParseFromArray(argvalue+sizeof(int), size)) {
+            plc_elog(ERROR, "composited outfunc parse failed");
+        }
+    }
+
+    plc_elog(WARNING, "composite data parse result:%s", arg.DebugString().c_str());
+
     plc_elog(ERROR, "init call request for composite type has not implemented.");
 }
 
@@ -169,13 +84,16 @@ void PLContainerClient::InitCallRequestArgument(const FunctionCallInfo fcinfo, c
 }
 
 void PLContainerClient::InitCallRequest(const FunctionCallInfo fcinfo, const plcProcInfo *proc, PlcRuntimeType type, CallRequest &request) {
+    plc_elog(DEBUG1, "fcinfo is :%s", PLContainerClient::functionCallInfoToStr(fcinfo).c_str());
+    plc_elog(DEBUG1, "proc is %s", PLContainerClient::procInfoToStr(proc).c_str());
+
     request.set_runtimetype(type);
     request.set_objectid(proc->funcOid);
     request.set_haschanged(proc->hasChanged);
     request.mutable_proc()->set_src(proc->src);
     request.mutable_proc()->set_name(proc->name);
     request.set_loglevel(log_min_messages);
-    request.set_rettype(this->GetDataType(&proc->result));
+    request.set_rettype(PLContainerProtoUtils::GetDataType(&proc->result));
     if (GetDatabaseEncoding() == PG_SQL_ASCII) {
         request.set_serverenc("ascii");
     } else {
@@ -184,7 +102,7 @@ void PLContainerClient::InitCallRequest(const FunctionCallInfo fcinfo, const plc
 
     for (int i=0;i<proc->nargs;i++) {
         PlcValue *arg = request.add_args();
-        arg->set_type(this->GetDataType(&proc->args[i]));
+        arg->set_type(PLContainerProtoUtils::GetDataType(&proc->args[i]));
         if (proc->argnames[i]) {
             arg->set_name(proc->argnames[i]);
         } else {
@@ -316,6 +234,98 @@ Datum PLContainerClient::GetCallResponseAsDatum(const FunctionCallInfo fcinfo, p
     }
     
     return retresult;
+}
+
+std::string PLContainerClient::functionCallInfoToStr(const FunctionCallInfo fcinfo) {
+    char result[1024];
+    std::string argnull;
+    for (int i=0;i<fcinfo->nargs;i++) {
+        if (fcinfo->argnull[i]) {
+            argnull += "1,";
+        } else {
+            argnull += "0,";
+        }
+    }
+    argnull = argnull.substr(0, argnull.length()-1);
+
+    snprintf(result, sizeof(result), 
+                    "fcinfo->isnull:%d "
+                    "fcinfo->nargs:%d "
+                    "fcinfo->argnull:[%s]",
+                    fcinfo->isnull,
+                    fcinfo->nargs,
+                    argnull.c_str());
+    return std::string(result);
+}
+
+std::string PLContainerClient::procInfoToStr(const plcProcInfo *proc) {
+    char result[1024];
+
+    std::string argnames;
+    std::string args;
+    for (int i=0;i<proc->nargs;i++) {
+        if (proc->argnames[i]) {
+            argnames += std::string(proc->argnames[i]) + ",";
+        } else {
+            argnames += ",";
+        }
+        args += PLContainerClient::typeInfoToStr(&proc->args[i]) + ",";
+    }
+    argnames = argnames.substr(0, argnames.length()-1); 
+    args = args.substr(0, args.length()-1); 
+ 
+    snprintf(result, sizeof(result), 
+                    "proname:%s "
+                    "plname:%s "
+                    "fn_readonly:%d "
+                    "result:%s "
+                    "src:%s "
+                    "argnames:[%s] "
+                    "args:[%s] "
+                    "nargs:%d "
+                    "name:%s "
+                    "hasChanged:%d "
+                    "retset:%d "
+                    "funcOid:%d",
+                    proc->proname,
+                    proc->pyname,
+                    proc->fn_readonly,
+                    PLContainerClient::typeInfoToStr(&proc->result).c_str(),
+                    proc->src,
+                    argnames.c_str(),
+                    args.c_str(),
+                    proc->nargs,
+                    proc->name,
+                    proc->hasChanged,
+                    proc->retset,
+                    proc->funcOid);
+    return std::string(result);
+}
+
+std::string PLContainerClient::typeInfoToStr(const plcTypeInfo *type) {
+    char result[1024];
+
+    snprintf(result, sizeof(result),
+                    "type:%d "
+                    "nSubTypes:%d "
+                    "is_rowtype:%d "
+                    "is_record:%d "
+                    "attisdropped:%d "
+                    "typ_relid:%d "
+                    "typeName:%s ",
+                    type->type,
+                    type->nSubTypes,
+                    type->is_rowtype,
+                    type->is_record,
+                    type->attisdropped,
+                    type->typ_relid,
+                    type->typeName);
+    for (int i=0;i<type->nSubTypes;i++) {
+
+        snprintf(result+strlen(result), sizeof(result), "subtype_%d:%s", i,
+                    PLContainerClient::typeInfoToStr(&type->subTypes[i]).c_str());
+    }
+    return std::string(result);
 }
 
 Datum plcontainer_function_handler(FunctionCallInfo fcinfo, plcProcInfo *proc, MemoryContext function_cxt) {

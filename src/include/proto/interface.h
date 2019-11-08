@@ -19,6 +19,7 @@ extern "C"
 #include "utils/array.h"
 #include "utils/syscache.h"
 #include "utils/array.h"
+#include "utils/typcache.h"
 
 // C interface definition
 typedef struct PLCoordinatorServer {
@@ -31,6 +32,9 @@ Datum plcontainer_function_handler(FunctionCallInfo fcinfo, plcProcInfo *proc, M
 PLCoordinatorServer *start_server(const char *address);
 int process_request(PLCoordinatorServer *server, int timeout_seconds);
 int get_new_container_from_coordinator(const char *runtime_id, plcContext *ctx);
+
+char *plc_datum_as_udt(Datum input, plcTypeInfo *type);
+//Datum plc_datum_from_udt(char *input, plcTypeInfo *type);
 
 #ifdef __cplusplus
 }
