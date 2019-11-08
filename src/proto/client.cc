@@ -39,7 +39,7 @@ void PLContainerClient::FunctionCall(const CallRequest &request, CallResponse &r
     plc_elog(DEBUG1, "PLContainerClient function call finished with status %d", status.error_code());
 }
 
-void PLContainerClient::InitCallRequestArgument(const FunctionCallInfo fcinfo, const plcProcInfo *proc, int argIdx, ScalarData &arg) {
+void PLContainerClient::initCallRequestArgument(const FunctionCallInfo fcinfo, const plcProcInfo *proc, int argIdx, ScalarData &arg) {
     PLContainerProtoUtils::SetScalarValue(arg,
                         proc->argnames[argIdx],
                         fcinfo->argnull[argIdx],
@@ -47,7 +47,7 @@ void PLContainerClient::InitCallRequestArgument(const FunctionCallInfo fcinfo, c
                         fcinfo->argnull[argIdx] ? NULL : proc->args[argIdx].outfunc(fcinfo->arg[argIdx], &proc->args[argIdx]));
 }
 
-void PLContainerClient::InitCallRequestArgument(const FunctionCallInfo fcinfo, const plcProcInfo *proc, int argIdx, ArrayData &arg) {
+void PLContainerClient::initCallRequestArgument(const FunctionCallInfo fcinfo, const plcProcInfo *proc, int argIdx, ArrayData &arg) {
     (void) fcinfo;
     (void) proc;
     (void) argIdx;
@@ -55,7 +55,7 @@ void PLContainerClient::InitCallRequestArgument(const FunctionCallInfo fcinfo, c
     plc_elog(ERROR, "init call request for array type has not implemented.");
 }
 
-void PLContainerClient::InitCallRequestArgument(const FunctionCallInfo fcinfo, const plcProcInfo *proc, int argIdx, CompositeData &arg) {
+void PLContainerClient::initCallRequestArgument(const FunctionCallInfo fcinfo, const plcProcInfo *proc, int argIdx, CompositeData &arg) {
     if (proc->argnames[argIdx]) {
         arg.set_name(proc->argnames[argIdx]);
     } else {
@@ -70,12 +70,13 @@ void PLContainerClient::InitCallRequestArgument(const FunctionCallInfo fcinfo, c
         }
     }
 
-    plc_elog(WARNING, "composite data parse result:%s", arg.DebugString().c_str());
+    plc_elog(DEBUG1, "composite data parse result:%s", arg.DebugString().c_str());
 
+    // TODO will be enabled once the RServer composite type done.
     plc_elog(ERROR, "init call request for composite type has not implemented.");
 }
 
-void PLContainerClient::InitCallRequestArgument(const FunctionCallInfo fcinfo, const plcProcInfo *proc, int argIdx, SetOfData &arg) {
+void PLContainerClient::initCallRequestArgument(const FunctionCallInfo fcinfo, const plcProcInfo *proc, int argIdx, SetOfData &arg) {
     (void) fcinfo;
     (void) proc;
     (void) argIdx;
@@ -114,23 +115,23 @@ void PLContainerClient::InitCallRequest(const FunctionCallInfo fcinfo, const plc
         case REAL:
         case TEXT:
         case BYTEA:
-            PLContainerClient::InitCallRequestArgument(fcinfo, proc, i, *arg->mutable_scalarvalue());
+            PLContainerClient::initCallRequestArgument(fcinfo, proc, i, *arg->mutable_scalarvalue());
             break;
         case ARRAY:
-            PLContainerClient::InitCallRequestArgument(fcinfo, proc, i, *arg->mutable_arrayvalue());
+            PLContainerClient::initCallRequestArgument(fcinfo, proc, i, *arg->mutable_arrayvalue());
             break;
         case COMPOSITE:
-            PLContainerClient::InitCallRequestArgument(fcinfo, proc, i, *arg->mutable_compositevalue());
+            PLContainerClient::initCallRequestArgument(fcinfo, proc, i, *arg->mutable_compositevalue());
             break;
         case SETOF:
-            PLContainerClient::InitCallRequestArgument(fcinfo, proc, i, *arg->mutable_setofvalue());
+            PLContainerClient::initCallRequestArgument(fcinfo, proc, i, *arg->mutable_setofvalue());
             break;
         default:
             plc_elog(ERROR, "invalid data type %d in argument %d in InitCallRequest", arg->type(), i);
         }
     }
 }
-Datum PLContainerClient::GetCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const ScalarData &response) {
+Datum PLContainerClient::getCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const ScalarData &response) {
     Datum retresult = (Datum)0;
 
     if (response.isnull()) {
@@ -184,7 +185,7 @@ Datum PLContainerClient::GetCallResponseAsDatum(const FunctionCallInfo fcinfo, p
     return retresult;
 }
 
-Datum PLContainerClient::GetCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const ArrayData &response) {
+Datum PLContainerClient::getCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const ArrayData &response) {
     (void) fcinfo;
     (void) proc;
     (void) response;
@@ -192,7 +193,7 @@ Datum PLContainerClient::GetCallResponseAsDatum(const FunctionCallInfo fcinfo, p
     return (Datum)0; 
 }
 
-Datum PLContainerClient::GetCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const CompositeData &response) {
+Datum PLContainerClient::getCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const CompositeData &response) {
     (void) fcinfo;
     (void) proc;
     (void) response;
@@ -200,7 +201,7 @@ Datum PLContainerClient::GetCallResponseAsDatum(const FunctionCallInfo fcinfo, p
     return (Datum)0; 
 }
 
-Datum PLContainerClient::GetCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const SetOfData &response) {
+Datum PLContainerClient::getCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const SetOfData &response) {
     (void) fcinfo;
     (void) proc;
     (void) response;
@@ -222,13 +223,13 @@ Datum PLContainerClient::GetCallResponseAsDatum(const FunctionCallInfo fcinfo, p
     case REAL:
     case TEXT:
     case BYTEA:
-        return this->GetCallResponseAsDatum(fcinfo, proc, result.scalarvalue());
+        return PLContainerClient::getCallResponseAsDatum(fcinfo, proc, result.scalarvalue());
     case ARRAY:
-        return this->GetCallResponseAsDatum(fcinfo, proc, result.arrayvalue());
+        return PLContainerClient::getCallResponseAsDatum(fcinfo, proc, result.arrayvalue());
     case COMPOSITE:
-        return this->GetCallResponseAsDatum(fcinfo, proc, result.compositevalue());
+        return PLContainerClient::getCallResponseAsDatum(fcinfo, proc, result.compositevalue());
     case SETOF:
-        return this->GetCallResponseAsDatum(fcinfo, proc, result.setofvalue());
+        return PLContainerClient::getCallResponseAsDatum(fcinfo, proc, result.setofvalue());
     default:
         plc_elog(ERROR, "uninvalid data type %d in ProtoToMessage", result.type());
     }

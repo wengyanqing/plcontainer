@@ -68,8 +68,6 @@ static void plc_backend_array_free(plcIterator *iter);
 
 static rawdata *plc_backend_array_next(plcIterator *self);
 
-//static char *plc_datum_as_udt(Datum input, plcTypeInfo *type);
-
 static Datum plc_datum_from_int1(char *input, plcTypeInfo *type);
 
 static Datum plc_datum_from_int2(char *input, plcTypeInfo *type);
@@ -93,8 +91,6 @@ static Datum plc_datum_from_bytea(char *input, plcTypeInfo *type);
 static Datum plc_datum_from_bytea_ptr(char *input, plcTypeInfo *type);
 
 static Datum plc_datum_from_array(char *input, plcTypeInfo *type);
-
-static Datum plc_datum_from_udt(char *input, plcTypeInfo *type);
 
 static Datum plc_datum_from_udt_ptr(char *input, plcTypeInfo *type);
 
@@ -469,50 +465,6 @@ static rawdata *plc_backend_array_next(plcIterator *self) {
 	return res;
 }
 
-/*
-HeapTupleData rec_data;
-rec_data.t_len = HeapTupleHeaderGetDatumLength(rec_header);
-ItemPointerSetInvalid(&(rec_data.t_self));
-rec_data.t_tableOid = InvalidOid;
-rec_data.t_data = rec_header;
-vattr = heap_getattr(&rec_data, (i + 1), type->tupleDesc, &isnull);
-*/
-/*
-static char *plc_datum_as_udt(Datum input, plcTypeInfo *type) {
-	HeapTupleHeader rec_header;
-	plcUDT *res;
-	int i, j;
-	int nNonDropped = 0;
-
-	for (i = 0; i < type->nSubTypes; i++) {
-		if (!type->subTypes[i].attisdropped) {
-			nNonDropped += 1;
-		}
-	}
-
-	res = plc_alloc_udt(nNonDropped);
-
-	rec_header = DatumGetHeapTupleHeader(input);
-	for (i = 0, j = 0; i < type->nSubTypes; i++) {
-		Datum vattr;
-		bool isnull;
-
-		if (!type->subTypes[i].attisdropped) {
-			vattr = GetAttributeByNum(rec_header, (i + 1), &isnull);
-			if (isnull) {
-				res->data[j].isnull = true;
-				res->data[j].value = NULL;
-			} else {
-				res->data[j].isnull = false;
-				res->data[j].value = type->subTypes[i].outfunc(vattr, &type->subTypes[i]);
-			}
-			j++;
-		}
-	}
-
-	return (char *) res;
-}
-*/
 static Datum plc_datum_from_int1(char *input, pg_attribute_unused() plcTypeInfo *type) {
 	return BoolGetDatum(*((bool *) input));
 }
@@ -614,40 +566,6 @@ static Datum plc_datum_from_array(char *input, plcTypeInfo *type) {
 	pfree(elems);
 
 	return dvalue;
-}
-
-static Datum plc_datum_from_udt(char *input, plcTypeInfo *type) {
-	TupleDesc desc;
-	HeapTuple tuple;
-	Datum *values;
-	bool *nulls;
-	volatile int i, j;
-	plcUDT *udt = (plcUDT *) input;
-
-	/* Build tuple */
-	values = palloc(sizeof(Datum) * type->nSubTypes);
-	nulls = palloc(sizeof(bool) * type->nSubTypes);
-	for (i = 0, j = 0; i < type->nSubTypes; ++i) {
-		if (!type->subTypes[i].attisdropped) {
-			if (udt->data[j].isnull) {
-				nulls[i] = true;
-				values[i] = (Datum) 0;
-			} else {
-				nulls[i] = false;
-				values[i] = type->subTypes[j].infunc(udt->data[j].value, &type->subTypes[j]);
-			}
-			j += 1;
-		}
-	}
-
-	desc = lookup_rowtype_tupdesc(type->typeOid, type->typmod);
-	tuple = heap_form_tuple(desc, values, nulls);
-	ReleaseTupleDesc(desc);
-
-	pfree(values);
-	pfree(nulls);
-
-	return HeapTupleGetDatum(tuple);
 }
 
 static Datum plc_datum_from_udt_ptr(char *input, plcTypeInfo *type) {

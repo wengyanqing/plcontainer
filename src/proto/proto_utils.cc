@@ -7,7 +7,7 @@ char *plc_datum_as_udt(Datum input, plcTypeInfo *type) {
     char *result = (char *)palloc(sizeof(int) + size);
     *(int *)result = size;
     udt.SerializeToArray(result+sizeof(int), size);
-    plc_elog(WARNING, "plc_datum_as_udt call, size:%d", size);
+    plc_elog(DEBUG1, "plc_datum_as_udt call, size:%d", size);
     return result;
 }
 
@@ -17,7 +17,7 @@ Datum plc_datum_from_udt(char *input, plcTypeInfo *type) {
     if (!udt.ParseFromArray(input+sizeof(int), size)) {
         plc_elog(ERROR, "plc_datum_from_udt failed");
     }
-    plc_elog(WARNING, "plc_datum_from_udt call, size:%d", size);
+    plc_elog(DEBUG1, "plc_datum_from_udt call, size:%d", size);
     return PLContainerProtoUtils::DatumFromProtoData(udt, type);
 }
 
@@ -221,7 +221,6 @@ Datum PLContainerProtoUtils::DatumFromProtoData(const CompositeData &cd, plcType
                 values[i] = (Datum) 0;
             } else {
                 nulls[i] = false;
-                //values[i] = type->subTypes[j].infunc(udt->data[j].value, &type->subTypes[j]);
                 values[i] = PLContainerProtoUtils::DatumFromProtoData(cd.values(i), type);
             }
             j++;

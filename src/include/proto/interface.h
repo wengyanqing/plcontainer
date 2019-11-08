@@ -22,19 +22,21 @@ extern "C"
 #include "utils/typcache.h"
 
 // C interface definition
+Datum plcontainer_function_handler(FunctionCallInfo fcinfo, plcProcInfo *proc, MemoryContext function_cxt); 
+
+// plcoordinator server
 typedef struct PLCoordinatorServer {
     const char *address;
     void *server;
 } PLCoordinatorServer;
 
-Datum plcontainer_function_handler(FunctionCallInfo fcinfo, plcProcInfo *proc, MemoryContext function_cxt); 
-
 PLCoordinatorServer *start_server(const char *address);
 int process_request(PLCoordinatorServer *server, int timeout_seconds);
 int get_new_container_from_coordinator(const char *runtime_id, plcContext *ctx);
 
+// type io
 char *plc_datum_as_udt(Datum input, plcTypeInfo *type);
-//Datum plc_datum_from_udt(char *input, plcTypeInfo *type);
+Datum plc_datum_from_udt(char *input, plcTypeInfo *type);
 
 #ifdef __cplusplus
 }
