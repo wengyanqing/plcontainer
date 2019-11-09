@@ -21,6 +21,25 @@ Datum plc_datum_from_udt(char *input, plcTypeInfo *type) {
     return PLContainerProtoUtils::DatumFromProtoData(udt, type);
 }
 
+char *plc_datum_as_array(Datum input, plcTypeInfo *type) {
+    ArrayData arr;
+    PLContainerProtoUtils::DatumAsProtoData(input, type, arr);
+    int size = arr.ByteSize();
+    char *result = (char *)palloc(sizeof(int) + size);
+    *(int *)result = size;
+    arr.SerializeToArray(result+sizeof(int), size);
+    plc_elog(DEBUG1, "plc_datum_as_array call, size:%d", size);
+    return result;
+
+    return NULL;
+}
+
+Datum plc_datum_from_array(char *input, plcTypeInfo *type) {
+    (void) input;
+    (void) type;
+    return Datum(0);
+}
+
 PlcDataType PLContainerProtoUtils::GetDataType(const plcTypeInfo *type) {
     PlcDataType ret = UNKNOWN;
     switch (type->type) {
@@ -148,6 +167,30 @@ void PLContainerProtoUtils::DatumAsProtoData(Datum input, const plcTypeInfo *typ
             j++;
         }
     }
+}
+
+void PLContainerProtoUtils::DatumAsProtoData(Datum input, const plcTypeInfo *type, ArrayData &ad) {
+    (void) input;
+    (void) type;
+    (void) ad;
+  /*  
+    ArrayType *array = DatumGetArrayTypeP(input);
+    int ndims = ARR_NDIM(array);
+    if (ndims != 1) {
+        plc_elog(ERROR, "currently only support 1-dim array with scalar type element");
+    }
+    if (pos->bitmap && (*(pos->bitmap) & pos->bitmask) == 0) {
+        res->isnull = 1;
+        res->value = NULL;
+    } else {
+        res->isnull = 0;
+        itemvalue = fetch_att(self->data, subtyp->typbyval, subtyp->typlen);
+        res->value = subtyp->outfunc(itemvalue, subtyp);
+
+        self->data = att_addlength_pointer(self->data, subtyp->typlen, self->data);
+        self->data = (char *) att_align_nominal(self->data, subtyp->typalign);
+    }
+   */
 }
 
 Datum PLContainerProtoUtils::DatumFromProtoData(const ScalarData &sd, plcTypeInfo *type) {
