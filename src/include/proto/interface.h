@@ -38,6 +38,9 @@ int get_new_container_from_coordinator(const char *runtime_id, plcContext *ctx);
 char *plc_datum_as_udt(Datum input, plcTypeInfo *type);
 Datum plc_datum_from_udt(char *input, plcTypeInfo *type);
 
+char *plc_datum_as_array(Datum input, plcTypeInfo *type);
+Datum plc_datum_from_array(char *input, plcTypeInfo *type);
+
 #ifdef __cplusplus
 }
 #endif

@@ -61,13 +61,13 @@ static char *plc_datum_as_float8_numeric(Datum input, plcTypeInfo *type);
 static char *plc_datum_as_text(Datum input, plcTypeInfo *type);
 
 static char *plc_datum_as_bytea(Datum input, plcTypeInfo *type);
-
+/*
 static char *plc_datum_as_array(Datum input, plcTypeInfo *type);
 
 static void plc_backend_array_free(plcIterator *iter);
 
 static rawdata *plc_backend_array_next(plcIterator *self);
-
+*/
 static Datum plc_datum_from_int1(char *input, plcTypeInfo *type);
 
 static Datum plc_datum_from_int2(char *input, plcTypeInfo *type);
@@ -89,9 +89,9 @@ static Datum plc_datum_from_text_ptr(char *input, plcTypeInfo *type);
 static Datum plc_datum_from_bytea(char *input, plcTypeInfo *type);
 
 static Datum plc_datum_from_bytea_ptr(char *input, plcTypeInfo *type);
-
+/*
 static Datum plc_datum_from_array(char *input, plcTypeInfo *type);
-
+*/
 static Datum plc_datum_from_udt_ptr(char *input, plcTypeInfo *type);
 
 static void
@@ -387,7 +387,7 @@ static char *plc_datum_as_bytea(Datum input, pg_attribute_unused() plcTypeInfo *
 	memcpy(out + 4, VARDATA(txt), len);
 	return out;
 }
-
+/*
 static char *plc_datum_as_array(Datum input, plcTypeInfo *type) {
 	ArrayType *array = DatumGetArrayTypeP(input);
 	plcIterator *iter;
@@ -440,7 +440,7 @@ static rawdata *plc_backend_array_next(plcIterator *self) {
 	pos = (plcPgArrayPosition *) self->position;
 	subtyp = &pos->type->subTypes[0];
 
-	/* Get source element, checking for NULL */
+	// Get source element, checking for NULL 
 	if (pos->bitmap && (*(pos->bitmap) & pos->bitmask) == 0) {
 		res->isnull = 1;
 		res->value = NULL;
@@ -453,10 +453,10 @@ static rawdata *plc_backend_array_next(plcIterator *self) {
 		self->data = (char *) att_align_nominal(self->data, subtyp->typalign);
 	}
 
-	/* advance bitmap pointer if any */
+	// advance bitmap pointer if any
 	if (pos->bitmap) {
 		pos->bitmask <<= 1;
-		if (pos->bitmask == 0x100 /* (1<<8) */) {
+		if (pos->bitmask == 0x100 ) {
 			pos->bitmap++;
 			pos->bitmask = 1;
 		}
@@ -464,7 +464,7 @@ static rawdata *plc_backend_array_next(plcIterator *self) {
 
 	return res;
 }
-
+*/
 static Datum plc_datum_from_int1(char *input, pg_attribute_unused() plcTypeInfo *type) {
 	return BoolGetDatum(*((bool *) input));
 }
@@ -520,7 +520,7 @@ static Datum plc_datum_from_bytea(char *input, pg_attribute_unused() plcTypeInfo
 static Datum plc_datum_from_bytea_ptr(char *input, plcTypeInfo *type) {
 	return plc_datum_from_bytea(*((char **) input), type);
 }
-
+/*
 static Datum plc_datum_from_array(char *input, plcTypeInfo *type) {
 	Datum dvalue;
 	Datum *elems;
@@ -567,7 +567,7 @@ static Datum plc_datum_from_array(char *input, plcTypeInfo *type) {
 
 	return dvalue;
 }
-
+*/
 static Datum plc_datum_from_udt_ptr(char *input, plcTypeInfo *type) {
 	return plc_datum_from_udt(*((char **) input), type);
 }

@@ -8,6 +8,7 @@ using namespace plcontainer;
 class PLContainerProtoUtils {
 public:
     static void DatumAsProtoData(Datum input, const plcTypeInfo *type, CompositeData &cd);
+    static void DatumAsProtoData(Datum input, const plcTypeInfo *type, ArrayData &cd);
 
     static Datum DatumFromProtoData(const ScalarData    &sd, plcTypeInfo *type);
     static Datum DatumFromProtoData(const CompositeData &cd, plcTypeInfo *type);
