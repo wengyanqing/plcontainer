@@ -8,7 +8,6 @@
 #ifndef PLC_MESSAGE_TYPES_H
 #define PLC_MESSAGE_TYPES_H
 
-#define MT_CALLREQ        'C'
 #define MT_EXCEPTION      'E'
 #define MT_LOG            'L'
 #define MT_QUOTE          'Q'
@@ -23,7 +22,6 @@
 #define MT_SUBTRAN_RESULT 'Z'
 #define MT_EOF            0
 
-#define MT_CALLREQ_BIT        0x1LL
 #define MT_EXCEPTION_BIT      0x2LL
 #define MT_LOG_BIT            0x4LL
 #define MT_RESULT_BIT         0x10LL

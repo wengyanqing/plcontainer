@@ -51,7 +51,6 @@ static int send_bytea(plcConn *conn, char *s);
 static int send_raw_object(plcConn *conn, plcType *type, rawdata *obj);
 static int send_raw_array_iter(plcConn *conn, plcType *type, plcIterator *iter);
 static int send_type(plcConn *conn, plcType *type);
-static int send_udt(plcConn *conn, plcType *type, plcUDT *udt);
 static int receive_message_type(plcConn *conn, char *c);
 static int receive_char(plcConn *conn, char *c);
 static int receive_int16(plcConn *conn, int16_t *i);
@@ -66,7 +65,6 @@ static int receive_bytea(plcConn *conn, char **s);
 static int receive_raw_object(plcConn *conn, plcType *type, rawdata *obj);
 static int receive_array(plcConn *conn, plcType *type, rawdata *obj);
 static int receive_type(plcConn *conn, plcType *type);
-static int receive_udt(plcConn *conn, plcType *type, char **resdata);
 static int send_argument(plcConn *conn, plcArgument *arg);
 static int send_result(plcConn *conn, plcMsgResult *res);
 static int send_log(plcConn *conn, plcMsgLog *mlog);
@@ -318,9 +316,6 @@ static int send_raw_object(plcConn *conn, plcType *type, rawdata *obj) {
 			case PLC_DATA_ARRAY:
 				res |= send_raw_array_iter(conn, &type->subTypes[0], (plcIterator *) obj->value);
 				break;
-			case PLC_DATA_UDT:
-				res |= send_udt(conn, type, (plcUDT *) obj->value);
-				break;
 			default:
 				plc_elog(ERROR, "Received unsupported argument type: %s [%d]",
 					    plc_get_type_name(type->type), type->type);
@@ -343,9 +338,6 @@ static int send_raw_array_iter(plcConn *conn, plcType *type, plcIterator *iter) 
 		rawdata *raw_object = iter->next(iter);
 		res |= send_raw_object(conn, type, raw_object);
 		if (!raw_object->isnull) {
-			if (type->type == PLC_DATA_UDT) {
-				plc_free_udt((plcUDT *) raw_object->value, type, true);
-			}
 			pfree(raw_object->value);
 		}
 		pfree(raw_object);
@@ -370,19 +362,6 @@ static int send_type(plcConn *conn, plcType *type) {
 			res |= send_type(conn, &type->subTypes[i]);
 	}
 	channel_elog(WARNING, "///////////////");
-
-	return res;
-}
-
-static int send_udt(plcConn *conn, plcType *type, plcUDT *udt) {
-	int res = 0;
-	int i = 0;
-
-	channel_elog(WARNING, "Sending user-defined type with %d members", type->nSubTypes);
-
-	for (i = 0; i < type->nSubTypes && res == 0; i++) {
-		res |= send_raw_object(conn, &type->subTypes[i], &udt->data[i]);
-	}
 
 	return res;
 }
@@ -537,9 +516,6 @@ static int receive_raw_object(plcConn *conn, plcType *type, rawdata *obj) {
 			case PLC_DATA_ARRAY:
 				res |= receive_array(conn, &type->subTypes[0], obj);
 				break;
-			case PLC_DATA_UDT:
-				res |= receive_udt(conn, type, &obj->value);
-				break;
 			default:
 				plc_elog(ERROR, "Received unsupported argument type: %s [%d]",
 					    plc_get_type_name(type->type), type->type);
@@ -593,9 +569,6 @@ static int receive_array(plcConn *conn, plcType *type, rawdata *obj) {
 					case PLC_DATA_BYTEA:
 						res |= receive_bytea(conn, &((char **) arr->data)[i]);
 						break;
-					case PLC_DATA_UDT:
-						res |= receive_udt(conn, type, &((char **) arr->data)[i]);
-						break;
 					default:
 						plc_elog(ERROR, "Should not get here (type: %d)",
 							    arr->meta->type);
@@ -631,22 +604,6 @@ static int receive_type(plcConn *conn, plcType *type) {
 	}
 	channel_elog(WARNING, "///////////////");
 
-	return res;
-}
-
-static int receive_udt(plcConn *conn, plcType *type, char **resdata) {
-	int res = 0;
-	int i = 0;
-	plcUDT *udt;
-
-	channel_elog(WARNING, "Receiving user-defined type with %d members", type->nSubTypes);
-
-	udt = plc_alloc_udt(type->nSubTypes);
-	for (i = 0; i < type->nSubTypes && res == 0; i++) {
-		res |= receive_raw_object(conn, &type->subTypes[i], &udt->data[i]);
-	}
-
-	*resdata = (char *) udt;
 	return res;
 }
 

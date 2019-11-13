@@ -43,29 +43,28 @@ public:
 
     void FunctionCall(const CallRequest &request, CallResponse &response);
 
-    void InitCallRequest(const FunctionCallInfo fcinfo, const plcProcInfo *proc, PlcRuntimeType type, CallRequest &request);
+    static void InitCallRequest(const FunctionCallInfo fcinfo, const plcProcInfo *proc, PlcRuntimeType type, CallRequest &request);
 
-    Datum GetCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const CallResponse &response);
+    static Datum GetCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const CallResponse &response);
 
 private: 
-    void SetScalarValue(ScalarData &data, const char *name, bool isnull, const plcTypeInfo *type, const char *value);
+    static void initCallRequestArgument(const FunctionCallInfo fcinfo, const plcProcInfo *proc, int argIdx, ScalarData &arg);
+    static void initCallRequestArgument(const FunctionCallInfo fcinfo, const plcProcInfo *proc, int argIdx, ArrayData &arg);
+    static void initCallRequestArgument(const FunctionCallInfo fcinfo, const plcProcInfo *proc, int argIdx, CompositeData &arg);
+    static void initCallRequestArgument(const FunctionCallInfo fcinfo, const plcProcInfo *proc, int argIdx, SetOfData &arg);
 
-    void InitCallRequestArgument(const FunctionCallInfo fcinfo, const plcProcInfo *proc, int argIdx, ScalarData &arg);
-    void InitCallRequestArgument(const FunctionCallInfo fcinfo, const plcProcInfo *proc, int argIdx, ArrayData &arg);
-    void InitCallRequestArgument(const FunctionCallInfo fcinfo, const plcProcInfo *proc, int argIdx, CompositeData &arg);
-    void InitCallRequestArgument(const FunctionCallInfo fcinfo, const plcProcInfo *proc, int argIdx, SetOfData &arg);
+    static Datum getCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const ScalarData &response);
+    static Datum getCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const ArrayData &response);
+    static Datum getCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const CompositeData &response);
+    static Datum getCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const SetOfData &response);
 
-    Datum GetCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const ScalarData &response);
-    Datum GetCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const ArrayData &response);
-    Datum GetCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const CompositeData &response);
-    Datum GetCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const SetOfData &response);
+    static std::string functionCallInfoToStr(const FunctionCallInfo fcinfo);
+    static std::string procInfoToStr(const plcProcInfo *proc);
+    static std::string typeInfoToStr(const plcTypeInfo *type);
 
 private:
     std::unique_ptr<PLContainer::Stub> stub_;
     const plcContext  *ctx;
-
-    PlcDataType GetDataType(const plcTypeInfo *type);
-    bool isSetOf(const plcTypeInfo *type);
 };
 
 class PLCoordinatorClient {

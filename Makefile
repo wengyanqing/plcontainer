@@ -34,7 +34,7 @@ FILES = src/function_cache.c src/plcontainer.c src/sqlhandler.c \
         src/common/base_network.c src/common/comm_channel.c src/common/comm_connectivity.c src/common/comm_messages.c src/common/comm_dummy_plc.c
 OBJS = $(foreach FILE,$(FILES),$(subst .c,.o,$(FILE)))
 		
-CXX_FILES=src/proto/client.cc src/proto/plcontainer.pb.cc src/proto/plcontainer.grpc.pb.cc
+CXX_FILES=src/proto/client.cc src/proto/proto_utils.cc src/proto/plcontainer.pb.cc src/proto/plcontainer.grpc.pb.cc
 OBJS += $(foreach FILE,$(CXX_FILES),$(subst .cc,.o,$(FILE)))
 
 PROTO_PREFIX=plcontainer

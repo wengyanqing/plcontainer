@@ -59,11 +59,6 @@ void free_result(plcMsgResult *res, bool isSender) {
 				for (j = 0; j < res->cols; j++) {
 					/* free the data if it is not null */
 					if (res->data[i][j].value != NULL) {
-						// For UDT we need to free up internal structures
-						if (res->types[j].type == PLC_DATA_UDT) {
-							plc_free_udt((plcUDT *) res->data[i][j].value, &res->types[j], isSender);
-						}
-
 						/* For arrays on receiver side we need to free up their data,
 						 * while on the sender side cleanup is managed by comm_channel */
 						if (!isSender && res->types[j].type == PLC_DATA_ARRAY) {
@@ -131,20 +126,14 @@ plcArray *plc_alloc_array(int ndims) {
 }
 
 void plc_free_array(plcArray *arr, plcType *type, bool isSender) {
+    (void) type;
+    (void) isSender;
 	int i;
 	if (arr != NULL) {
 		if (arr->meta->type == PLC_DATA_TEXT || arr->meta->type == PLC_DATA_BYTEA) {
 			for (i = 0; i < arr->meta->size; i++) {
 				if (((char **) arr->data)[i] != NULL) {
 					pfree(((char **) arr->data)[i]);
-				}
-			}
-		}
-		if (arr->meta->type == PLC_DATA_UDT) {
-			for (i = 0; i < arr->meta->size; i++) {
-				if (((char **) arr->data)[i] != NULL) {
-					plc_free_udt(((plcUDT **) arr->data)[i], &type->subTypes[0], isSender);
-					pfree(((plcUDT **) arr->data)[i]);
 				}
 			}
 		}
@@ -158,31 +147,6 @@ void plc_free_array(plcArray *arr, plcType *type, bool isSender) {
 		pfree(arr->meta);
 		pfree(arr);
 	}
-}
-
-plcUDT *plc_alloc_udt(int nargs) {
-	plcUDT *res;
-
-	res = palloc(sizeof(plcUDT));
-	res->data = palloc(nargs * sizeof(rawdata));
-
-	return res;
-}
-
-void plc_free_udt(plcUDT *udt, plcType *type, bool isSender) {
-	int i;
-
-	for (i = 0; i < type->nSubTypes; i++) {
-		if (!udt->data[i].isnull) {
-			if (!isSender && type->subTypes[i].type == PLC_DATA_ARRAY) {
-				plc_free_array((plcArray *) udt->data[i].value, &type->subTypes[i], isSender);
-			} else {
-				pfree(udt->data[i].value);
-			}
-		}
-	}
-
-	pfree(udt->data);
 }
 
 int plc_get_type_length(plcDatatype dt) {
