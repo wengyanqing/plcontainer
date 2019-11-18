@@ -442,8 +442,8 @@ int start_container(const char *runtimeid, pid_t qe_pid, int session_id, int ccn
 	{
 		snprintf(*uds_address, DEFAULT_STRING_BUFFER_SIZE, "%s.%d.%d.%d.%d", DEBUG_UDS_PREFIX, qe_pid, session_id, ccnt, (int)getpid());
 		server_pid = start_stand_alone_process(*uds_address);
-        *container_id = (char *) palloc(DEFAULT_STRING_BUFFER_SIZE);
-        snprintf(*container_id, DEFAULT_STRING_BUFFER_SIZE, "standalone_pid_%d", server_pid);
+		*container_id = (char *) palloc(DEFAULT_STRING_BUFFER_SIZE);
+		snprintf(*container_id, DEFAULT_STRING_BUFFER_SIZE, "standalone_pid_%d", server_pid);
 		store_container_info(&key, server_pid, NULL);
 		return 0;
 	} else {

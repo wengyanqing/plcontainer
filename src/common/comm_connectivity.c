@@ -54,7 +54,7 @@ void plcFreeContext(plcContext *ctx)
 {
 	plcReleaseContext(ctx);
 	pfree(ctx->service_address);
-    pfree(ctx->container_id);
+	pfree(ctx->container_id);
 	pfree(ctx);
 }
 
