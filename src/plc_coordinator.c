@@ -426,11 +426,10 @@ int run_container(char *docker_name)
 	}
 	return 0;
 }
-int start_container(const char *runtimeid, pid_t qe_pid, int session_id, int ccnt, char **uds_address)
+int start_container(const char *runtimeid, pid_t qe_pid, int session_id, int ccnt, char **uds_address, char **container_id)
 {
 	pid_t server_pid;
 	int res;
-	char *docker_name = NULL;
 
 	*uds_address = (char*) palloc(DEFAULT_STRING_BUFFER_SIZE);
 	ContainerKey key;
@@ -443,6 +442,8 @@ int start_container(const char *runtimeid, pid_t qe_pid, int session_id, int ccn
 	{
 		snprintf(*uds_address, DEFAULT_STRING_BUFFER_SIZE, "%s.%d.%d.%d.%d", DEBUG_UDS_PREFIX, qe_pid, session_id, ccnt, (int)getpid());
 		server_pid = start_stand_alone_process(*uds_address);
+        *container_id = (char *) palloc(DEFAULT_STRING_BUFFER_SIZE);
+        snprintf(*container_id, DEFAULT_STRING_BUFFER_SIZE, "standalone_pid_%d", server_pid);
 		store_container_info(&key, server_pid, NULL);
 		return 0;
 	} else {
@@ -459,11 +460,11 @@ int start_container(const char *runtimeid, pid_t qe_pid, int session_id, int ccn
 		res = -1;
 		while (retry_count < MAX_START_RETRY) {
 			if (!created) {
-				res = create_container(runtime_entry, &key, &docker_name, uds_dir);
+				res = create_container(runtime_entry, &key, &container_id, uds_dir);
 			}
 			if (created || res == 0) {
 				created = true;
-				res = run_container(docker_name);
+				res = run_container(container_id);
 				if (res == 0)
 					break;
 			}

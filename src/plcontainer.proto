@@ -21,6 +21,7 @@ message StartContainerRequest {
 message StartContainerResponse {
     int32   status = 1;
     string  container_address = 2;
+    string  container_id = 3;
 }
 
 message StopContainerRequest {

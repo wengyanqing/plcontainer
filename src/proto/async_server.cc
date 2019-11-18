@@ -23,13 +23,16 @@ public:
                 plc_elog(WARNING, "StartContainer request is not ok. Finishing.");
             } else {
                 char *uds_address;
-                ret = start_container(request_.runtime_id().c_str(), (pid_t)request_.qe_pid(), request_.session_id(), request_.command_count(), &uds_address);
+                char *container_id;
+                ret = start_container(request_.runtime_id().c_str(), (pid_t)request_.qe_pid(), request_.session_id(), request_.command_count(), &uds_address, &container_id);
                 if (ret == 0) {
                     response_.set_container_address(uds_address);
+                    response_.set_container_id(container_id);
                 }
                 response_.set_status(ret);
                 responder_.Finish(response_, grpc::Status::OK, this);
                 pfree(uds_address);
+                pfree(container_id);
                 plc_elog(DEBUG1, "StartContainer request successfully. request:%s response:%s",
                         request_.DebugString().c_str(),
                         response_.DebugString().c_str());

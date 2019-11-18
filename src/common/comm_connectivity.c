@@ -22,6 +22,9 @@
 void plcContextInit(plcContext *ctx)
 {
 	ctx->service_address = NULL;
+    ctx->container_id = NULL;
+    ctx->current_stage_num = 0;
+    ctx->max_stage_num = MAX_PLC_CONTEXT_STAGE_NUM;
 }
 
 /*
@@ -31,7 +34,7 @@ void plcContextInit(plcContext *ctx)
  */
 void plcReleaseContext(plcContext *ctx)
 {
-	(void) ctx;
+	ctx->current_stage_num = 0;
 }
 
 /*
@@ -41,7 +44,7 @@ void plcReleaseContext(plcContext *ctx)
 
 void plcContextReset(plcContext *ctx)
 {
-	(void) ctx;
+	ctx->current_stage_num = 0;
 }
 
 /*
@@ -51,5 +54,56 @@ void plcFreeContext(plcContext *ctx)
 {
 	plcReleaseContext(ctx);
 	pfree(ctx->service_address);
+    pfree(ctx->container_id);
 	pfree(ctx);
+}
+
+void plcContextBeginStage(plcContext *ctx, const char *stage_name, const char *message_format, ...) {
+    if (ctx->current_stage_num >= ctx->max_stage_num) {
+        plc_elog(ERROR, "plcContext has too many stages.");
+    }
+
+    plcContextStage *stage = &ctx->stages[ctx->current_stage_num];
+    strncpy(stage->name, stage_name, MAX_PLC_CONTEXT_STAGE_NAME_SIZE-1);
+    gettimeofday(&stage->begin_time, NULL);
+   
+    stage->message[0] = '\0'; 
+    if (message_format) {
+        va_list args;
+        va_start(args, message_format);
+        vsnprintf(stage->message, MAX_PLC_CONTEXT_STAGE_MESSAGE_SIZE, message_format, args);
+        va_end(args); 
+    }
+
+}
+
+void plcContextEndStage(plcContext *ctx, const char *stage_name, plcContextStageStatus status, const char *message_format, ...) {
+    plcContextStage *stage = &ctx->stages[ctx->current_stage_num];
+    if (strcmp(stage->name, stage_name) != 0) {
+        plc_elog(ERROR, "plcContext finish stage error, current stage %s != %s", stage->name, stage_name);
+    }
+
+    gettimeofday(&stage->end_time, NULL);
+    stage->cost_ms = stage->end_time.tv_sec * 1000 + stage->end_time.tv_usec / 1000 
+                    - stage->begin_time.tv_sec * 1000 - stage->begin_time.tv_usec / 1000;
+
+    stage->status = status;
+
+     if (message_format) {
+        va_list args;
+        va_start(args, message_format);
+        vsnprintf(stage->message+strlen(stage->message), MAX_PLC_CONTEXT_STAGE_MESSAGE_SIZE-strlen(stage->message), message_format, args);
+        va_end(args); 
+    }
+    ctx->current_stage_num++;
+}
+
+void plcContextLogging(int log_level, plcContext *ctx) {
+    char logbuf[MAX_PLC_CONTEXT_STAGE_MESSAGE_SIZE * MAX_PLC_CONTEXT_STAGE_NUM] = "PLContainer Trace Logging:\n";
+    for (int i=0;i<ctx->current_stage_num;i++) {
+        plcContextStage *stage = &ctx->stages[i];
+        snprintf(logbuf+strlen(logbuf), MAX_PLC_CONTEXT_STAGE_MESSAGE_SIZE*MAX_PLC_CONTEXT_STAGE_NUM-strlen(logbuf), 
+                "\nSTAGE_%d:%s STATUS:%d COST:%dms MESSAGE:%s", i, stage->name, stage->status, stage->cost_ms, stage->message); 
+    }
+    plc_elog(log_level, "%s", logbuf);
 }
