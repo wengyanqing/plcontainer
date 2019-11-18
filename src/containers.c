@@ -27,7 +27,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "common/comm_channel.h"
 #include "common/comm_connectivity.h"
 #include "common/comm_dummy.h"
 #include "common/comm_shm.h"

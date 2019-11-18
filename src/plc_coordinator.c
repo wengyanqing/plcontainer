@@ -38,12 +38,10 @@
 #include "utils/syscache.h"
 #include "storage/shm_toc.h"
 
-#include "common/base_network.h"
 #include "plc/plc_docker_api.h"
 #include "plc/plc_configuration.h"
 #include "plc/plc_coordinator.h"
 #include "common/comm_shm.h"
-#include "common/comm_channel.h"
 #include "common/messages/messages.h"
 #include "plc/plc_coordinator.h"
 

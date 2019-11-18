@@ -28,7 +28,6 @@
 #include "utils/memutils.h"
 #include "utils/guc.h"
 /* PLContainer Headers */
-#include "common/comm_channel.h"
 #include "common/comm_dummy.h"
 #include "common/messages/messages.h"
 #include "plc/containers.h"
@@ -36,8 +35,6 @@
 #include "plc/plcontainer.h"
 #include "plc/plc_configuration.h"
 #include "plc/plc_typeio.h"
-#include "plc/sqlhandler.h"
-#include "plc/subtransaction_handler.h"
 
 #include "interface.h"
 
@@ -78,7 +75,6 @@ _PG_init(void) {
 	if (inited)
 		return;
 
-	explicit_subtransactions = NIL;
 	inited = true;
 }
 

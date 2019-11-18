@@ -33,12 +33,6 @@ interpreted as representing official policies, either expressed or implied, of t
 #include "common/messages/messages.h"
 #include "plc/plc_typeio.h"
 
-/* Structure representing function result data */
-typedef struct {
-	plcMsgResult *resmsg;
-	uint32 resrow;
-} plcProcResult;
-
 typedef struct {
 	/* plpython inherit */
 	char	   *proname;		     /* SQL name of procedure */

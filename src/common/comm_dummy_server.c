@@ -94,16 +94,3 @@ void plc_elog(int lvl, const char *format, ...)
 
 }
 
-void init_pplan_slots(plcContext *ctx)
-{
-	(void)ctx;
-	plc_elog(FATAL, "This function should not be called in server side!");
-}
-
-void deinit_pplan_slots(plcContext *ctx)
-{
-	(void)ctx;
-	plc_elog(FATAL, "This function should not be called in server side!");
-}
-
-
