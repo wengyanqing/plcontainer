@@ -192,11 +192,6 @@ void PLContainerProtoUtils::DatumAsProtoData(Datum input, const plcTypeInfo *typ
         ScalarData *sd = ad.add_values();
  
         if (bitmap && (*bitmap & bitmask) == 0) {
-            /*  TODO
-            plc_elog(WARNING, "array is empty, i=%d", i);
-            isnull = 1;
-            value = NULL;
-            */
             PLContainerProtoUtils::SetScalarValue(*sd, elementType->typeName, true, elementType, NULL);
             break;
         } else {
