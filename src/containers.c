@@ -72,6 +72,8 @@ plcContext *get_container_context(const char *runtime_id)
 		{
 			/* Re-init data buffer and plan slot */
 			plcContextReset(containers[i].ctx);
+			plcContextBeginStage(containers[i].ctx, "get_cached_container", NULL);
+			plcContextEndStage(containers[i].ctx, "get_cached_container", PLC_CONTEXT_STAGE_SUCCESS, NULL);
 			return containers[i].ctx;
 		}
 	}

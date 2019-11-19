@@ -19,12 +19,15 @@
 #include "common/comm_connectivity.h"
 #include "common/comm_dummy.h"
 
+plcContext *global_context = NULL;
+
 void plcContextInit(plcContext *ctx)
 {
 	ctx->service_address = NULL;
-    ctx->container_id = NULL;
-    ctx->current_stage_num = 0;
-    ctx->max_stage_num = MAX_PLC_CONTEXT_STAGE_NUM;
+	ctx->container_id = NULL;
+	ctx->current_stage_num = 0;
+	ctx->max_stage_num = MAX_PLC_CONTEXT_STAGE_NUM;
+	global_context = ctx;
 }
 
 /*
@@ -35,6 +38,7 @@ void plcContextInit(plcContext *ctx)
 void plcReleaseContext(plcContext *ctx)
 {
 	ctx->current_stage_num = 0;
+	global_context = ctx;
 }
 
 /*
@@ -45,6 +49,7 @@ void plcReleaseContext(plcContext *ctx)
 void plcContextReset(plcContext *ctx)
 {
 	ctx->current_stage_num = 0;
+	global_context = ctx;
 }
 
 /*
@@ -56,6 +61,7 @@ void plcFreeContext(plcContext *ctx)
 	pfree(ctx->service_address);
 	pfree(ctx->container_id);
 	pfree(ctx);
+	global_context = NULL;
 }
 
 void plcContextBeginStage(plcContext *ctx, const char *stage_name, const char *message_format, ...) {

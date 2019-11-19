@@ -3,6 +3,7 @@
 #include "lib/stringinfo.h"
 #include "utils/memutils.h"
 #include "common/comm_dummy.h"
+#include "common/comm_connectivity.h"
 
 extern void plc_elog(int log_level, const char *format, ...) pg_attribute_printf(2,3);
 
@@ -21,6 +22,11 @@ void plc_elog(int log_level, const char *format, ...)
 			break;
 		enlargeStringInfo(&buf, needed);
 	}
+
+	if (log_level == ERROR && global_context) {
+		plcContextLogging(LOG, global_context);
+	}
+
 	elog(log_level, "%s", buf.data);
 	pfree(buf.data);
 }

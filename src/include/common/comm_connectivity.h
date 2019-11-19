@@ -42,6 +42,7 @@ typedef struct plcContext
     int max_stage_num;
 } plcContext;
 
+extern plcContext *global_context;
 
 #define UDS_SHARED_FILE "unix.domain.socket.shared.file"
 #define IPC_CLIENT_DIR "/tmp/plcontainer"
