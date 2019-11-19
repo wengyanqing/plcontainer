@@ -460,11 +460,11 @@ int start_container(const char *runtimeid, pid_t qe_pid, int session_id, int ccn
 		res = -1;
 		while (retry_count < MAX_START_RETRY) {
 			if (!created) {
-				res = create_container(runtime_entry, &key, &container_id, uds_dir);
+				res = create_container(runtime_entry, &key, container_id, uds_dir);
 			}
 			if (created || res == 0) {
 				created = true;
-				res = run_container(container_id);
+				res = run_container(*container_id);
 				if (res == 0)
 					break;
 			}
