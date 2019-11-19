@@ -21,6 +21,23 @@ Datum plc_datum_from_udt(char *input, plcTypeInfo *type) {
     return PLContainerProtoUtils::DatumFromProtoData(udt, type);
 }
 
+char *plc_datum_as_array(Datum input, plcTypeInfo *type) {
+    ArrayData arr;
+    PLContainerProtoUtils::DatumAsProtoData(input, type, arr);
+    int size = arr.ByteSize();
+    char *result = (char *)palloc(sizeof(int) + size);
+    *(int *)result = size;
+    arr.SerializeToArray(result+sizeof(int), size);
+    plc_elog(DEBUG1, "plc_datum_as_array call, size:%d", size);
+    return result;
+}
+
+Datum plc_datum_from_array(char *input, plcTypeInfo *type) {
+    (void) input;
+    (void) type;
+    return Datum(0);
+}
+
 PlcDataType PLContainerProtoUtils::GetDataType(const plcTypeInfo *type) {
     PlcDataType ret = UNKNOWN;
     switch (type->type) {
@@ -146,6 +163,52 @@ void PLContainerProtoUtils::DatumAsProtoData(Datum input, const plcTypeInfo *typ
                 PLContainerProtoUtils::SetScalarValue(*sd, type->subTypes[i].typeName, false, &type->subTypes[i], type->subTypes[i].outfunc(vattr, &type->subTypes[i]));
             }
             j++;
+        }
+    }
+}
+
+void PLContainerProtoUtils::DatumAsProtoData(Datum input, const plcTypeInfo *type, ArrayData &ad) {
+    ArrayType *array = DatumGetArrayTypeP(input);
+    int ndims = ARR_NDIM(array);
+    if (ndims != 1) {
+        plc_elog(ERROR, "currently only support 1-dim array with scalar type element");
+    }
+
+    bits8   *bitmap = ARR_NULLBITMAP(array);
+    int     bitmask = 1;
+    int nitems = ArrayGetNItems(ARR_NDIM(array), ARR_DIMS(array));
+    char *data = ARR_DATA_PTR(array);
+    plcTypeInfo *elementType = &type->subTypes[0];
+    ad.set_elementtype(PLContainerProtoUtils::GetDataType(elementType));
+ 
+    Datum itemvalue;
+    int curitem = 0;
+
+    while (true) {
+        if (curitem >= nitems) {
+            break;
+        }
+        curitem++;
+        ScalarData *sd = ad.add_values();
+ 
+        if (bitmap && (*bitmap & bitmask) == 0) {
+            PLContainerProtoUtils::SetScalarValue(*sd, elementType->typeName, true, elementType, NULL);
+            break;
+        } else {
+            itemvalue = fetch_att(data, elementType->typbyval, elementType->typlen);
+            PLContainerProtoUtils::SetScalarValue(*sd, elementType->typeName, false, elementType, elementType->outfunc(itemvalue, elementType));
+
+            data = att_addlength_pointer(data, elementType->typlen, data);
+            data = (char *) att_align_nominal(data, elementType->typalign);
+        }
+
+        // TODO advance bitmap pointer if any
+        if (bitmap) {
+            bitmask <<= 1;
+            if (bitmask == 0x100 ) {
+                bitmap++;
+                bitmask = 1;
+            }
         }
     }
 }

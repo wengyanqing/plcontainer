@@ -30,8 +30,8 @@ DATA_built = $(MGMTDIR)/sql/plcontainer_install.sql $(MGMTDIR)/sql/plcontainer_u
 # TODO: clean docker out from plcontainer
 FILES = src/function_cache.c src/plcontainer.c  \
         src/containers.c src/message_fns.c src/plc_configuration.c src/plc_docker_api.c \
-        src/plc_typeio.c src/subtransaction_handler.c \
-        src/common/base_network.c src/common/comm_channel.c src/common/comm_connectivity.c src/common/comm_messages.c src/common/comm_dummy_plc.c
+        src/plc_typeio.c \
+        src/common/comm_connectivity.c src/common/comm_messages.c src/common/comm_dummy_plc.c
 OBJS = $(foreach FILE,$(FILES),$(subst .c,.o,$(FILE)))
 		
 CXX_FILES=src/proto/client.cc src/proto/proto_utils.cc src/proto/plcontainer.pb.cc src/proto/plcontainer.grpc.pb.cc

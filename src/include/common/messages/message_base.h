@@ -24,17 +24,6 @@ typedef char bool;
 #endif
 
 #include <stdint.h>
-// TODO: change message type to one byte
-#define base_message_content unsigned short msgtype;
-
-typedef struct plcMessage {
-	base_message_content
-} plcMessage;
-
-typedef struct {
-	int32_t isnull;
-	char *value;
-} rawdata;
 
 /*
  * Note:
@@ -56,21 +45,6 @@ typedef enum {
 	PLC_DATA_INVALID,      // Invalid data type
 	PLC_DATA_MAX
 } plcDatatype;
-
-typedef struct plcType plcType;
-
-struct plcType {
-	plcDatatype type;
-	int16_t nSubTypes;
-	char *typeName;
-	plcType *subTypes;
-};
-
-typedef struct {
-	plcType type;
-	char *name;
-	rawdata data;
-} plcArgument;
 
 int plc_get_type_length(plcDatatype dt);
 

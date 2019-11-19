@@ -62,12 +62,6 @@ static char *plc_datum_as_text(Datum input, plcTypeInfo *type);
 
 static char *plc_datum_as_bytea(Datum input, plcTypeInfo *type);
 
-static char *plc_datum_as_array(Datum input, plcTypeInfo *type);
-
-static void plc_backend_array_free(plcIterator *iter);
-
-static rawdata *plc_backend_array_next(plcIterator *self);
-
 static Datum plc_datum_from_int1(char *input, plcTypeInfo *type);
 
 static Datum plc_datum_from_int2(char *input, plcTypeInfo *type);
@@ -89,8 +83,6 @@ static Datum plc_datum_from_text_ptr(char *input, plcTypeInfo *type);
 static Datum plc_datum_from_bytea(char *input, plcTypeInfo *type);
 
 static Datum plc_datum_from_bytea_ptr(char *input, plcTypeInfo *type);
-
-static Datum plc_datum_from_array(char *input, plcTypeInfo *type);
 
 static Datum plc_datum_from_udt_ptr(char *input, plcTypeInfo *type);
 
@@ -283,35 +275,6 @@ void fill_type_info(FunctionCallInfo fcinfo, Oid typeOid, plcTypeInfo *type) {
 	fill_type_info_inner(fcinfo, typeOid, type, false, false);
 }
 
-void copy_type_info(plcType *type, plcTypeInfo *ptype) {
-	type->type = ptype->type;
-	type->nSubTypes = 0;
-	if (ptype->typeName != NULL) {
-		type->typeName = plc_top_strdup(ptype->typeName);
-	} else {
-		type->typeName = NULL;
-	}
-	if (ptype->nSubTypes > 0) {
-		int i, j;
-
-		for (i = 0; i < ptype->nSubTypes; i++) {
-			if (!ptype->subTypes[i].attisdropped) {
-				type->nSubTypes += 1;
-			}
-		}
-
-		type->subTypes = (plcType *) top_palloc(type->nSubTypes * sizeof(plcType));
-		for (i = 0, j = 0; i < ptype->nSubTypes; i++) {
-			if (!ptype->subTypes[i].attisdropped) {
-				copy_type_info(&type->subTypes[j], &ptype->subTypes[i]);
-				j += 1;
-			}
-		}
-	} else {
-		type->subTypes = NULL;
-	}
-}
-
 void free_type_info(plcTypeInfo *type) {
 	int i = 0;
 
@@ -388,83 +351,6 @@ static char *plc_datum_as_bytea(Datum input, pg_attribute_unused() plcTypeInfo *
 	return out;
 }
 
-static char *plc_datum_as_array(Datum input, plcTypeInfo *type) {
-	ArrayType *array = DatumGetArrayTypeP(input);
-	plcIterator *iter;
-	plcArrayMeta *meta;
-	plcPgArrayPosition *pos;
-	int i;
-
-	iter = (plcIterator *) palloc(sizeof(plcIterator));
-	meta = (plcArrayMeta *) palloc(sizeof(plcArrayMeta));
-	pos = (plcPgArrayPosition *) palloc(sizeof(plcPgArrayPosition));
-	iter->meta = meta;
-	iter->position = (char *) pos;
-
-	meta->type = type->subTypes[0].type;
-	meta->ndims = ARR_NDIM(array);
-	meta->dims = (int *) palloc(meta->ndims * sizeof(int));
-	pos->type = type;
-	pos->bitmap = ARR_NULLBITMAP(array);
-	pos->bitmask = 1;
-	meta->size = meta->ndims > 0 ? 1 : 0;
-	for (i = 0; i < meta->ndims; i++) {
-		meta->dims[i] = ARR_DIMS(array)[i];
-		meta->size *= ARR_DIMS(array)[i];
-	}	
-	iter->data = ARR_DATA_PTR(array);
-	iter->next = plc_backend_array_next;
-	iter->cleanup = plc_backend_array_free;
-
-	return (char *) iter;
-}
-
-static void plc_backend_array_free(plcIterator *iter) {
-	plcArrayMeta *meta;
-	meta = (plcArrayMeta *) iter->meta;
-	if (meta->ndims > 0) {
-		pfree(meta->dims);
-	}
-	pfree(iter->meta);
-	pfree(iter->position);
-	return;
-}
-
-static rawdata *plc_backend_array_next(plcIterator *self) {
-	plcTypeInfo *subtyp;
-	rawdata *res;
-	plcPgArrayPosition *pos;
-	Datum itemvalue;
-
-	res = palloc(sizeof(rawdata));
-	pos = (plcPgArrayPosition *) self->position;
-	subtyp = &pos->type->subTypes[0];
-
-	/* Get source element, checking for NULL */
-	if (pos->bitmap && (*(pos->bitmap) & pos->bitmask) == 0) {
-		res->isnull = 1;
-		res->value = NULL;
-	} else {
-		res->isnull = 0;
-		itemvalue = fetch_att(self->data, subtyp->typbyval, subtyp->typlen);
-		res->value = subtyp->outfunc(itemvalue, subtyp);
-
-		self->data = att_addlength_pointer(self->data, subtyp->typlen, self->data);
-		self->data = (char *) att_align_nominal(self->data, subtyp->typalign);
-	}
-
-	/* advance bitmap pointer if any */
-	if (pos->bitmap) {
-		pos->bitmask <<= 1;
-		if (pos->bitmask == 0x100 /* (1<<8) */) {
-			pos->bitmap++;
-			pos->bitmask = 1;
-		}
-	}
-
-	return res;
-}
-
 static Datum plc_datum_from_int1(char *input, pg_attribute_unused() plcTypeInfo *type) {
 	return BoolGetDatum(*((bool *) input));
 }
@@ -519,53 +405,6 @@ static Datum plc_datum_from_bytea(char *input, pg_attribute_unused() plcTypeInfo
 
 static Datum plc_datum_from_bytea_ptr(char *input, plcTypeInfo *type) {
 	return plc_datum_from_bytea(*((char **) input), type);
-}
-
-static Datum plc_datum_from_array(char *input, plcTypeInfo *type) {
-	Datum dvalue;
-	Datum *elems;
-	ArrayType *array = NULL;
-	int *lbs = NULL;
-	int i;
-	plcArray *arr;
-	char *ptr;
-	int len;
-	plcTypeInfo *subType;
-
-	arr = (plcArray *) input;
-	subType = &type->subTypes[0];
-	lbs = (int *) palloc(arr->meta->ndims * sizeof(int));
-	for (i = 0; i < arr->meta->ndims; i++)
-		lbs[i] = 1;
-
-	elems = palloc(arr->meta->size * sizeof(Datum));
-	ptr = arr->data;
-	len = plc_get_type_length(subType->type);
-	for (i = 0; i < arr->meta->size; i++) {
-		if (arr->nulls[i] == 0) {
-			elems[i] = subType->infunc(ptr, subType);
-		} else {
-			elems[i] = (Datum) 0;
-		}
-		ptr += len;
-	}
-
-	array = construct_md_array(elems,
-	                           arr->nulls,
-	                           arr->meta->ndims,
-	                           arr->meta->dims,
-	                           lbs,
-	                           subType->typeOid,
-	                           subType->typlen,
-	                           subType->typbyval,
-	                           subType->typalign);
-
-	dvalue = PointerGetDatum(array);
-
-	pfree(lbs);
-	pfree(elems);
-
-	return dvalue;
 }
 
 static Datum plc_datum_from_udt_ptr(char *input, plcTypeInfo *type) {
