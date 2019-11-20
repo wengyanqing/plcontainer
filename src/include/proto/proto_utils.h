@@ -9,6 +9,7 @@ class PLContainerProtoUtils {
 public:
     static void DatumAsProtoData(Datum input, const plcTypeInfo *type, CompositeData &cd);
     static void DatumAsProtoData(Datum input, const plcTypeInfo *type, ArrayData &cd);
+    static void DatumAsProtoData(Datum input, const plcTypeInfo *type, SetOfData &setof);
 
     static Datum DatumFromProtoData(const ScalarData    &sd, plcTypeInfo *type);
     static Datum DatumFromProtoData(const CompositeData &cd, plcTypeInfo *type);
@@ -17,6 +18,8 @@ public:
     static PlcDataType GetDataType(const plcTypeInfo *type);
 private:
     static bool isSetOf(const plcTypeInfo *type); 
+    static void DatumAsProtoArrayOrSetOf(Datum input, const plcTypeInfo *type, ArrayData *ad, SetOfData *setof);
+
 };
 
 #endif 
