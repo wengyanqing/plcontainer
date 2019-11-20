@@ -393,7 +393,14 @@ Datum plcontainer_function_handler(FunctionCallInfo fcinfo, plcProcInfo *proc, M
              */
             client.Init(ctx);
             client.InitCallRequest(fcinfo, proc, R, request);
+            
+            plcContextBeginStage(ctx, "R_function_call", NULL);
             client.FunctionCall(request, response);
+            plcContextEndStage(ctx, "R_function_call",
+                    PLC_CONTEXT_STAGE_SUCCESS,
+                    "[REQUEST]:%s, [RESPONSE]:%s", request.DebugString().c_str(), response.DebugString().c_str());
+
+            plcContextLogging(LOG, ctx);
         }
 
         if (fcinfo->flinfo->fn_retset) {
@@ -433,6 +440,8 @@ int get_new_container_from_coordinator(const char *runtime_id, plcContext *ctx) 
     StartContainerRequest   request;
     StartContainerResponse  response;
 
+    plcContextBeginStage(ctx, "request_coordinator_for_container", NULL);
+
     std::string server_addr = get_coordinator_address();
     PLCoordinatorClient     client(grpc::CreateChannel(
       "unix://"+server_addr, grpc::InsecureChannelCredentials()));
@@ -442,10 +451,16 @@ int get_new_container_from_coordinator(const char *runtime_id, plcContext *ctx) 
     request.set_session_id(gp_session_id);
     request.set_command_count(gp_command_count);
     client.StartContainer(request, response);
+
+    plcContextEndStage(ctx, "request_coordinator_for_container",
+                    response.status() == 0 ? PLC_CONTEXT_STAGE_SUCCESS : PLC_CONTEXT_STAGE_FAIL,
+                    "[REQUEST]:%s, [RESPONSE]:%s", request.DebugString().c_str(), response.DebugString().c_str());
+
     if (response.status() != 0) {
         return -1;
     }
     ctx->service_address = plc_top_strdup(response.container_address().c_str());
+    ctx->container_id = plc_top_strdup(response.container_id().c_str());
     return 0;
 }
 
