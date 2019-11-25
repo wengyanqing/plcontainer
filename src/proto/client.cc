@@ -25,16 +25,35 @@ void PLContainerClient::Init(const plcContext *ctx) {
 }
 
 void PLContainerClient::FunctionCall(const CallRequest &request, CallResponse &response) {
-    grpc::ClientContext context;
-    context.set_wait_for_ready(true);
-    plc_elog(DEBUG1, "function call request:%s", request.DebugString().c_str());
-    grpc::Status status = stub_->FunctionCall(&context, request, &response);
-    plc_elog(DEBUG1, "function call response:%s", response.DebugString().c_str());
-    if (!status.ok()) {
-        plc_elog(ERROR, "plcontainer function call RPC failed., error:%s", status.error_message().c_str());
-    } else if (response.has_exception()) {
-        Error *error = response.mutable_exception();
-        plc_elog(ERROR, "plcontainer function call failed. error:%s stacktrace:%s", error->message().c_str(), error->stacktrace().c_str());
+    int client_connection_timeout = 5;
+    std::chrono::system_clock::time_point deadline;
+    grpc::Status status; 
+    while (true) {
+        CHECK_FOR_INTERRUPTS();
+
+        grpc::ClientContext context;
+        deadline = std::chrono::system_clock::now() + std::chrono::seconds(client_connection_timeout);
+        context.set_deadline(deadline);
+        context.set_wait_for_ready(true);
+
+        plc_elog(DEBUG1, "function call request:%s", request.DebugString().c_str());
+        status = stub_->FunctionCall(&context, request, &response);
+        plc_elog(DEBUG1, "function call response:%s", response.DebugString().c_str());
+        if (!status.ok()) {
+            if (status.error_code() == grpc::StatusCode::DEADLINE_EXCEEDED) {
+                plc_elog(LOG, "plcontainer functioncall timeout");
+            } else {
+                plc_elog(ERROR, "plcontainer function call RPC failed., error:%s", status.error_message().c_str());
+            }
+            continue;
+        } else if (response.has_exception()) {
+            Error *error = response.mutable_exception();
+            plc_elog(ERROR, "plcontainer function call failed. error:%s stacktrace:%s", error->message().c_str(), error->stacktrace().c_str());
+            break;
+        } else {
+            // success
+            break;
+        }
     }
     plc_elog(DEBUG1, "PLContainerClient function call finished with status %d", status.error_code());
 }
@@ -473,8 +492,8 @@ void PLCoordinatorClient::StartContainer(const StartContainerRequest &request, S
     plc_elog(DEBUG1, "StartContainer request:%s", request.DebugString().c_str());
     grpc::Status status = stub_->StartContainer(&context, request, &response);
     if (!status.ok()) {
-        plc_elog(ERROR, "StartContainer RPC failed., error:%s", status.error_message().c_str());
         response.set_status(1);
+        plc_elog(ERROR, "StartContainer RPC failed., error:%s", status.error_message().c_str());
     }
     plc_elog(DEBUG1, "StartContainer response:%s", response.DebugString().c_str());
     plc_elog(DEBUG1, "StartContainer finished with status %d", status.error_code());
