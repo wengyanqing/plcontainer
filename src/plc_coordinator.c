@@ -447,6 +447,7 @@ int start_container(const char *runtimeid, pid_t qe_pid, int session_id, int ccn
 		*container_id = (char *) palloc(DEFAULT_STRING_BUFFER_SIZE);
 		snprintf(*container_id, DEFAULT_STRING_BUFFER_SIZE, "standalone_pid_%d", server_pid);
 		store_container_info(&key, server_pid, NULL);
+		*log_msg[0] = '\0';
 		return 0;
 	} else {
 		runtimeConfEntry *runtime_entry = plc_get_runtime_configuration(runtimeid);
@@ -506,7 +507,7 @@ int destroy_container(pid_t qe_pid, int session_id, int ccnt)
 		QeRequest *request;
 		int res;
 		request = (QeRequest*) palloc (sizeof(QeRequest));
-		memset(request, 0, sizeof(request));
+		memset(request, 0, sizeof(QeRequest));
 		request->pid = qe_pid;
 		request->conn = session_id;
 		request->ccnt = ccnt;
