@@ -110,10 +110,22 @@ void PLContainerClient::initCallRequestArgument(const FunctionCallInfo fcinfo, c
 }
 
 void PLContainerClient::initCallRequestArgument(const FunctionCallInfo fcinfo, const plcProcInfo *proc, int argIdx, SetOfData &arg) {
-    (void) fcinfo;
-    (void) proc;
-    (void) argIdx;
-    (void) arg;
+    if (proc->argnames[argIdx]) {
+        arg.set_name(proc->argnames[argIdx]);
+    } else {
+        arg.set_name("");
+    }
+
+    if (!fcinfo->argnull[argIdx]) {
+        char *argvalue = proc->args[argIdx].outfunc(fcinfo->arg[argIdx], &proc->args[argIdx]);
+        int size = *(int *)argvalue;
+        if (!arg.ParseFromArray(argvalue+sizeof(int), size)) {
+            plc_elog(ERROR, "setof outfunc parse failed");
+        }
+    }
+
+    plc_elog(DEBUG1, "setof data parse result:%s", arg.DebugString().c_str());
+
     plc_elog(ERROR, "init call request for setof type has not implemented.");
 }
 
