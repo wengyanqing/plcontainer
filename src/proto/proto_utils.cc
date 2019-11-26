@@ -12,13 +12,7 @@ char *plc_datum_as_udt(Datum input, plcTypeInfo *type) {
 }
 
 Datum plc_datum_from_udt(char *input, plcTypeInfo *type) {
-    CompositeData udt;
-    int size = *(int *)input;
-    if (!udt.ParseFromArray(input+sizeof(int), size)) {
-        plc_elog(ERROR, "plc_datum_from_udt failed");
-    }
-    plc_elog(DEBUG1, "plc_datum_from_udt call, size:%d", size);
-    return PLContainerProtoUtils::DatumFromProtoData(udt, type);
+    return PLContainerProtoUtils::DatumFromProtoData(*(CompositeData *)input, type);
 }
 
 char *plc_datum_as_array(Datum input, plcTypeInfo *type) {
@@ -220,7 +214,7 @@ void PLContainerProtoUtils::DatumAsProtoArrayOrSetOf(Datum input, const plcTypeI
         }
         curitem++;
 
-        if (!elementType->type == PLC_DATA_UDT) {
+        if (elementType->type != PLC_DATA_UDT) {
             ScalarData *sd = ad->add_values();
      
             if (bitmap && (*bitmap & bitmask) == 0) {
@@ -319,7 +313,7 @@ Datum PLContainerProtoUtils::DatumFromProtoData(const CompositeData &cd, plcType
                 values[i] = (Datum) 0;
             } else {
                 nulls[i] = false;
-                values[i] = PLContainerProtoUtils::DatumFromProtoData(cd.values(i), type);
+                values[i] = PLContainerProtoUtils::DatumFromProtoData(cd.values(i), &type->subTypes[i]);
             }
             j++;
         }

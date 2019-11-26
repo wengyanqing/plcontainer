@@ -106,7 +106,7 @@ void PLContainerClient::initCallRequestArgument(const FunctionCallInfo fcinfo, c
     plc_elog(DEBUG1, "composite data parse result:%s", arg.DebugString().c_str());
 
     // TODO will be enabled once the RServer composite type done.
-    plc_elog(ERROR, "init call request for composite type has not implemented.");
+    //plc_elog(ERROR, "init call request for composite type has not implemented.");
 }
 
 void PLContainerClient::initCallRequestArgument(const FunctionCallInfo fcinfo, const plcProcInfo *proc, int argIdx, SetOfData &arg) {
@@ -139,7 +139,7 @@ void PLContainerClient::InitCallRequest(const FunctionCallInfo fcinfo, const plc
     request.mutable_proc()->set_src(proc->src);
     request.mutable_proc()->set_name(proc->name);
     request.set_loglevel(log_min_messages);
-    request.set_rettype(PLContainerProtoUtils::GetDataType(&proc->result));
+    PLContainerClient::setFunctionReturnType(request.mutable_rettype(), &proc->result);
     if (GetDatabaseEncoding() == PG_SQL_ASCII) {
         request.set_serverenc("ascii");
     } else {
@@ -176,6 +176,20 @@ void PLContainerClient::InitCallRequest(const FunctionCallInfo fcinfo, const plc
         }
     }
 }
+
+void PLContainerClient::setFunctionReturnType(::plcontainer::ReturnType* rettype, const plcTypeInfo *type) {
+    PlcDataType rt = PLContainerProtoUtils::GetDataType(type); 
+    rettype->set_type(rt);
+    if (rt == ARRAY || rt == COMPOSITE || rt == SETOF) {
+        const plcTypeInfo *t = (rt == SETOF ? &type->subTypes[0] : type);
+        for (int i=0; i<t->nSubTypes; i++) {
+            rettype->add_subtypes(PLContainerProtoUtils::GetDataType(&t->subTypes[i]));
+        }
+    } else {
+        // no subtype for scalar return type
+    }
+}
+
 Datum PLContainerClient::getCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const ScalarData &response) {
     Datum retresult = (Datum)0;
 
@@ -183,7 +197,6 @@ Datum PLContainerClient::getCallResponseAsDatum(const FunctionCallInfo fcinfo, p
         return retresult;
     }
 
-    fcinfo->isnull = false;
     char *buffer = NULL;
     switch (proc->result.type) {
     case PLC_DATA_INT1:
@@ -224,6 +237,7 @@ Datum PLContainerClient::getCallResponseAsDatum(const FunctionCallInfo fcinfo, p
     }
        
     if (buffer) { 
+        fcinfo->isnull = false;
         retresult = proc->result.infunc(buffer, &proc->result);
         pfree(buffer);
     }
@@ -239,11 +253,12 @@ Datum PLContainerClient::getCallResponseAsDatum(const FunctionCallInfo fcinfo, p
 }
 
 Datum PLContainerClient::getCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const CompositeData &response) {
-    (void) fcinfo;
-    (void) proc;
-    (void) response;
-    plc_elog(ERROR, "Composite type of response data is not supported yet."); 
-    return (Datum)0; 
+    if (response.values_size() == 0) {
+        return (Datum)0;
+    } else {
+        fcinfo->isnull = false;
+        return proc->result.infunc((char *)&response, &proc->result);
+    }
 }
 
 Datum PLContainerClient::getCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const SetOfData &response) {
