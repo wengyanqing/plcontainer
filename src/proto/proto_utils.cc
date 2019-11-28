@@ -22,13 +22,27 @@ Datum plc_datum_from_udt(char *input, plcTypeInfo *type) {
 }
 
 char *plc_datum_as_array(Datum input, plcTypeInfo *type) {
-    ArrayData arr;
-    PLContainerProtoUtils::DatumAsProtoData(input, type, arr);
-    int size = arr.ByteSize();
-    char *result = (char *)palloc(sizeof(int) + size);
-    *(int *)result = size;
-    arr.SerializeToArray(result+sizeof(int), size);
-    plc_elog(DEBUG1, "plc_datum_as_array call, size:%d", size);
+    int size = 0;
+    char *result;
+    if (type->subTypes && type->subTypes[0].type == PLC_DATA_UDT) {
+        SetOfData setof;
+        PLContainerProtoUtils::DatumAsProtoData(input, type, setof);
+        size = setof.ByteSize();
+        result = (char *)palloc(sizeof(int) + size);
+        *(int *)result = size;
+        setof.SerializeToArray(result+sizeof(int), size);
+        plc_elog(DEBUG1, "plc_datum_as_array call, setof size:%d", size);
+
+    } else {
+        ArrayData arr;
+        PLContainerProtoUtils::DatumAsProtoData(input, type, arr);
+        size = arr.ByteSize();
+        result = (char *)palloc(sizeof(int) + size);
+        *(int *)result = size;
+        arr.SerializeToArray(result+sizeof(int), size);
+        plc_elog(DEBUG1, "plc_datum_as_array call, size:%d", size);
+    }
+
     return result;
 }
 
@@ -168,10 +182,23 @@ void PLContainerProtoUtils::DatumAsProtoData(Datum input, const plcTypeInfo *typ
 }
 
 void PLContainerProtoUtils::DatumAsProtoData(Datum input, const plcTypeInfo *type, ArrayData &ad) {
+    PLContainerProtoUtils::DatumAsProtoArrayOrSetOf(input, type, &ad, NULL);
+}
+
+void PLContainerProtoUtils::DatumAsProtoData(Datum input, const plcTypeInfo *type, SetOfData &setof) {
+    PLContainerProtoUtils::DatumAsProtoArrayOrSetOf(input, type, NULL, &setof);
+}
+
+void PLContainerProtoUtils::DatumAsProtoArrayOrSetOf(Datum input, const plcTypeInfo *type, ArrayData *ad, SetOfData *setof) {
+    bool isSetOf = false;
+    if (!ad && setof) {
+        isSetOf = true;
+    }
+
     ArrayType *array = DatumGetArrayTypeP(input);
     int ndims = ARR_NDIM(array);
     if (ndims != 1) {
-        plc_elog(ERROR, "currently only support 1-dim array with scalar type element");
+        plc_elog(ERROR, "currently only support 1-dim array or setof");
     }
 
     bits8   *bitmap = ARR_NULLBITMAP(array);
@@ -179,8 +206,11 @@ void PLContainerProtoUtils::DatumAsProtoData(Datum input, const plcTypeInfo *typ
     int nitems = ArrayGetNItems(ARR_NDIM(array), ARR_DIMS(array));
     char *data = ARR_DATA_PTR(array);
     plcTypeInfo *elementType = &type->subTypes[0];
-    ad.set_elementtype(PLContainerProtoUtils::GetDataType(elementType));
- 
+
+    if (!isSetOf) {
+        ad->set_elementtype(PLContainerProtoUtils::GetDataType(elementType));
+    }
+
     Datum itemvalue;
     int curitem = 0;
 
@@ -189,18 +219,23 @@ void PLContainerProtoUtils::DatumAsProtoData(Datum input, const plcTypeInfo *typ
             break;
         }
         curitem++;
-        ScalarData *sd = ad.add_values();
- 
-        if (bitmap && (*bitmap & bitmask) == 0) {
-            PLContainerProtoUtils::SetScalarValue(*sd, elementType->typeName, true, elementType, NULL);
-            break;
-        } else {
-            itemvalue = fetch_att(data, elementType->typbyval, elementType->typlen);
-            PLContainerProtoUtils::SetScalarValue(*sd, elementType->typeName, false, elementType, elementType->outfunc(itemvalue, elementType));
 
-            data = att_addlength_pointer(data, elementType->typlen, data);
-            data = (char *) att_align_nominal(data, elementType->typalign);
+        if (!elementType->type == PLC_DATA_UDT) {
+            ScalarData *sd = ad->add_values();
+     
+            if (bitmap && (*bitmap & bitmask) == 0) {
+                PLContainerProtoUtils::SetScalarValue(*sd, elementType->typeName, true, elementType, NULL);
+                break;
+            } else {
+                itemvalue = fetch_att(data, elementType->typbyval, elementType->typlen);
+                PLContainerProtoUtils::SetScalarValue(*sd, elementType->typeName, false, elementType, elementType->outfunc(itemvalue, elementType));
+            }
+        } else {
+            PLContainerProtoUtils::DatumAsProtoData(PointerGetDatum(data), elementType, *setof->add_rowvalues());
         }
+
+        data = att_addlength_pointer(data, elementType->typlen, data);
+        data = (char *) att_align_nominal(data, elementType->typalign);
 
         // TODO advance bitmap pointer if any
         if (bitmap) {
