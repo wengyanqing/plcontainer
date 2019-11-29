@@ -1,6 +1,6 @@
 set datestyle='ISO,MDY';
 select rshouldnotparse();
-ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Error R Server Logs, ERROR, Cannot parse user code gpdbR.rshouldnotparse <- function() { (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Error R Server Logs, ERROR, Cannot parse user code gpdbR.rshouldnotparse <- function() { (comm_dummy_plc.c:30)
 DETAIL:  
 # container: plc_r_shared
 return 'hello'
@@ -85,151 +85,151 @@ select rtext('123');
 (1 row)
 
 select rbyteain(rbyteaout(array[123,1,7]::int[]));
-ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rbyteaout"
 select rbyteain(rbyteaout(array[123,null,7]::int[]));
-ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rbyteaout"
 --start_ignore
 select rtest_mia();
-ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unsupport return type 6  stacktrace: (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unsupport return type 6  stacktrace: (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rtest_mia"
 --end_ignore
 select vec('{1.23, 1.32}'::float8[]);
-ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "vec"
 select vec('{1, 5,10, 100, 7}'::int8[]);
-ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "vec"
 select vec('{1.23, 1.32}'::float4[]);
-ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "vec"
 select vec('{1, 5,10, 100, 7}'::int4[]);
-ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "vec"
 select vec('{1, 5,10, 100, 7}'::numeric[]);
-ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "vec"
 select rintarr('{1,2,3,4}'::int2[]);
-ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rintarr"
 select rintarr('{1,2,3,null}'::int2[]);
-ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rintarr"
 select rintarr('{null}'::int2[]);
-ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rintarr"
 select rintarr('{{1,2,3,4},{5,6,7,8}}'::int2[]);
-ERROR:  plcontainer log: currently only support 1-dim array with scalar type element (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: currently only support 1-dim array or setof (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rintarr"
 select rdimarr('{{1,2,3,4},{5,6,7,8}}'::int2[]);
-ERROR:  plcontainer log: currently only support 1-dim array with scalar type element (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: currently only support 1-dim array or setof (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rdimarr"
 select rintarr('{1,2,3,4,5}'::int4[]);
-ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rintarr"
 select rintarr('{1,2,3,4,null}'::int4[]);
-ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rintarr"
 select rintarr('{null}'::int4[]);
-ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rintarr"
 select rintarr('{{1,2,3,4},{5,6,7,8}}'::int4[]);
-ERROR:  plcontainer log: currently only support 1-dim array with scalar type element (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: currently only support 1-dim array or setof (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rintarr"
 select rdimarr('{{1,2,3,4},{5,6,7,8}}'::int4[]);
-ERROR:  plcontainer log: currently only support 1-dim array with scalar type element (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: currently only support 1-dim array or setof (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rdimarr"
 select rintarr('{1,2,3,4,6}'::int8[]);
-ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rintarr"
 select rintarr('{1,2,3,6,null}'::int8[]);
-ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rintarr"
 select rintarr('{null}'::int8[]);
-ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rintarr"
 select rintarr('{{1,2,3,4},{5,6,7,8}}'::int8[]);
-ERROR:  plcontainer log: currently only support 1-dim array with scalar type element (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: currently only support 1-dim array or setof (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rintarr"
 select rdimarr('{{1,2,3,4},{5,6,7,8}}'::int8[]);
-ERROR:  plcontainer log: currently only support 1-dim array with scalar type element (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: currently only support 1-dim array or setof (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rdimarr"
 select rfloatarr('{1.2,2.3,3.4,5.6}'::float8[]);
-ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rfloatarr"
 select rfloatarr('{1.2,2.3,3.4,null}'::float8[]);
-ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rfloatarr"
 select rfloatarr('{null}'::float8[]);
-ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rfloatarr"
 select rfloatarr('{{1.2,2.3,3.4,5.6,6.7},{1.2,2.3,3.4,5.6,6.7}}'::float8[]);
-ERROR:  plcontainer log: currently only support 1-dim array with scalar type element (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: currently only support 1-dim array or setof (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rfloatarr"
 select rdimarr('{{1.2,2.3,3.4,5.6,6.7},{1.2,2.3,3.4,5.6,6.7}}'::float8[]);
-ERROR:  plcontainer log: currently only support 1-dim array with scalar type element (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: currently only support 1-dim array or setof (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rdimarr"
 select rfloatarr('{1.2,2.3,3.4,5.6,6.7}'::float4[]);
-ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rfloatarr"
 select rfloatarr('{1.2,2.3,3.4,5.6,null}'::float4[]);
-ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rfloatarr"
 select rfloatarr('{null}'::float4[]);
-ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rfloatarr"
 select rfloatarr('{{1.2,2.3,3.4,5.6,6.7},{1.2,2.3,3.4,5.6,6.7}}'::float4[]);
-ERROR:  plcontainer log: currently only support 1-dim array with scalar type element (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: currently only support 1-dim array or setof (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rfloatarr"
 select rdimarr('{{1.2,2.3,3.4,5.6,6.7},{1.2,2.3,3.4,5.6,6.7}}'::float4[]);
-ERROR:  plcontainer log: currently only support 1-dim array with scalar type element (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: currently only support 1-dim array or setof (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rdimarr"
 select rfloatarr('{1.2,2.3,3.4,5.6,6.7}'::numeric[]);
-ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rfloatarr"
 select rfloatarr('{1.2,2.3,3.4,5.6,null}'::numeric[]);
-ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rfloatarr"
 select rfloatarr('{null}'::numeric[]);
-ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rfloatarr"
 select rfloatarr('{{1.2,2.3,3.4,5.6,6.7},{1.2,2.3,3.4,5.6,6.7}}'::numeric[]);
-ERROR:  plcontainer log: currently only support 1-dim array with scalar type element (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: currently only support 1-dim array or setof (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rfloatarr"
 select rdimarr('{{1.2,2.3,3.4,5.6,6.7},{1.2,2.3,3.4,5.6,6.7}}'::numeric[]);
-ERROR:  plcontainer log: currently only support 1-dim array with scalar type element (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: currently only support 1-dim array or setof (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rdimarr"
 select rboolarr('{1,1,0}'::bool[]);
-ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rboolarr"
 select rboolarr('{1,1,0,NULL}'::bool[]);
-ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rboolarr"
 select rboolarr('{NULL}'::bool[]);
-ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rboolarr"
 select rboolarr('{{1,1,0},{1,0,0}}'::bool[]);
-ERROR:  plcontainer log: currently only support 1-dim array with scalar type element (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: currently only support 1-dim array or setof (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rboolarr"
 select rdimarr('{{1,1,0},{1,0,0}}'::bool[]);
-ERROR:  plcontainer log: currently only support 1-dim array with scalar type element (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: currently only support 1-dim array or setof (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rdimarr"
 select rtimestamparr($${'2012-01-02 12:34:56.789012','2012-01-03 12:34:56.789012'}$$::timestamp[]);
-ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for array type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rtimestamparr"
 --select rlog100_shared();
 select rpg_spi_exec('select 1');
-ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unable execute user code  stacktrace: (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unable execute user code  stacktrace: (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rpg_spi_exec"
 select rlogging();
-ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unable execute user code  stacktrace: (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unable execute user code  stacktrace: (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rlogging"
 select rlogging2();
-ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unable execute user code  stacktrace: (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unable execute user code  stacktrace: (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rlogging2"
 \! psql -d ${PL_TESTDB} -c "select rlogging_fatal();"
-ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unable execute user code  stacktrace: (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unable execute user code  stacktrace: (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rlogging_fatal"
 --start_ignore
 select rsetofint4();
@@ -258,40 +258,40 @@ LINE 1: select rsetoffloat8();
                ^
 HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 select rsetoftext();
-ERROR:  plcontainer log: plcontainer_function_handler not support fn_retset (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: plcontainer_function_handler not support fn_retset (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rsetoftext"
 select rsetoffloat8array();
-ERROR:  plcontainer log: plcontainer_function_handler not support fn_retset (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: plcontainer_function_handler not support fn_retset (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rsetoffloat8array"
 select rsetofint4array();
-ERROR:  plcontainer log: plcontainer_function_handler not support fn_retset (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: plcontainer_function_handler not support fn_retset (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rsetofint4array"
 select rsetofint8array();
-ERROR:  plcontainer log: plcontainer_function_handler not support fn_retset (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: plcontainer_function_handler not support fn_retset (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rsetofint8array"
 select rsetoftextarray();
-ERROR:  plcontainer log: plcontainer_function_handler not support fn_retset (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: plcontainer_function_handler not support fn_retset (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rsetoftextarray"
 --end_ignore
 select runargs1('foo');
-ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unable execute user code  stacktrace: (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unable execute user code  stacktrace: (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "runargs1"
 select runargs2(123, 'foo');
-ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Error R Server Logs, ERROR, Cannot parse user code gpdbR.runargs2 <- function(a, ) { (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Error R Server Logs, ERROR, Cannot parse user code gpdbR.runargs2 <- function(a, ) { (comm_dummy_plc.c:30)
 DETAIL:  
 # container: plc_r_shared
 return(paste(a, args[[2]], sep=""))
 }  stacktrace:
 CONTEXT:  PLContainer function "runargs2"
 select runargs3(123, 'foo', 'bar');
-ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Error R Server Logs, ERROR, Cannot parse user code gpdbR.runargs3 <- function(a, , c) { (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Error R Server Logs, ERROR, Cannot parse user code gpdbR.runargs3 <- function(a, , c) { (comm_dummy_plc.c:30)
 DETAIL:  
 # container: plc_r_shared
 return(paste(a, args[[2]], c, sep=""))
 }  stacktrace:
 CONTEXT:  PLContainer function "runargs3"
 select runargs4(1,null,null,1);
-ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Error R Server Logs, ERROR, Cannot parse user code gpdbR.runargs4 <- function(, , , ) { (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Error R Server Logs, ERROR, Cannot parse user code gpdbR.runargs4 <- function(, , , ) { (comm_dummy_plc.c:30)
 DETAIL:  
 # container: plc_r_shared
 return(length(args))
@@ -304,14 +304,17 @@ select rnested_call_three('foo');
 (1 row)
 
 select rnested_call_two('foobar');
-ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unable execute user code  stacktrace: (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unable execute user code  stacktrace: (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rnested_call_two"
 select rnested_call_one('foo1');
-ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unable execute user code  stacktrace: (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unable execute user code  stacktrace: (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rnested_call_one"
 select rtestudt1( ('t', 1, 2, 3, 4, 5, 6, 'foobar')::test_type );
-ERROR:  plcontainer log: init call request for composite type has not implemented. (comm_dummy_plc.c:24)
-CONTEXT:  PLContainer function "rtestudt1"
+ rtestudt1 
+-----------
+        10
+(1 row)
+
 select rtestudt2( (
         array[true,false,true]::bool[],
         array[1,2,3]::smallint[],
@@ -321,24 +324,30 @@ select rtestudt2( (
         array[5.5,6.5,7.5]::float8[],
         array[6.5,7.5,8.5]::numeric[],
         array['a','b','c']::varchar[])::test_type2 );
-ERROR:  plcontainer log: invalid data type 7 in sclar data (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: invalid data type 7 in sclar data (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rtestudt2"
 select rtestudt6a();
-ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unsupport return type 5  stacktrace: (comm_dummy_plc.c:24)
-CONTEXT:  PLContainer function "rtestudt6a"
+     rtestudt6a      
+---------------------
+ (t,1,2,3,4,4,6,foo)
+(1 row)
+
 select rtestudt6b();
-ERROR:  plcontainer log: plcontainer_function_handler not support fn_retset (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: plcontainer_function_handler not support fn_retset (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rtestudt6b"
 --start_ignore
 select rtestudt8();
-ERROR:  plcontainer log: plcontainer_function_handler not support fn_retset (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: plcontainer_function_handler not support fn_retset (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rtestudt8"
 select rtestudt11();
-ERROR:  plcontainer log: plcontainer_function_handler not support fn_retset (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: plcontainer_function_handler not support fn_retset (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rtestudt11"
 select * from rtestudt13( (1,2,'a')::test_type3 );
-ERROR:  plcontainer log: init call request for composite type has not implemented. (comm_dummy_plc.c:24)
-CONTEXT:  PLContainer function "rtestudt13"
+ a | b | c 
+---+---+---
+ 1 | 2 | a
+(1 row)
+
 --end_ignore
 --select paster('{hello, happy}','{world, birthday}',' ');
 --select rtest_spi_tup('select fname, lname,username from users order by 1,2,3');
@@ -346,24 +355,24 @@ CONTEXT:  PLContainer function "rtestudt13"
 -- select rtest_spi_ta('select oid, typname from pg_type where typname = ''oid'' or typname = ''text''');
 --start_ignore
 select rvectornull_bool();
-ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unsupport return type 6  stacktrace: (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unsupport return type 6  stacktrace: (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rvectornull_bool"
 select rvectornull_int2();
-ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unsupport return type 6  stacktrace: (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unsupport return type 6  stacktrace: (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rvectornull_int2"
 select rvectornull_int4();
-ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unsupport return type 6  stacktrace: (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unsupport return type 6  stacktrace: (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rvectornull_int4"
 select rvectornull_int8();
-ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unsupport return type 6  stacktrace: (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unsupport return type 6  stacktrace: (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rvectornull_int8"
 select rvectornull_float4();
-ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unsupport return type 6  stacktrace: (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unsupport return type 6  stacktrace: (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rvectornull_float4"
 select rvectornull_float8();
-ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unsupport return type 6  stacktrace: (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unsupport return type 6  stacktrace: (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rvectornull_float8"
 select rvectornull_numeric();
-ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unsupport return type 6  stacktrace: (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unsupport return type 6  stacktrace: (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rvectornull_numeric"
 --end_ignore

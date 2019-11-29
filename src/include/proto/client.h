@@ -58,6 +58,8 @@ private:
     static Datum getCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const CompositeData &response);
     static Datum getCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const SetOfData &response);
 
+    static void setFunctionReturnType(::plcontainer::ReturnType* rettype, const plcTypeInfo *type);
+
     static std::string functionCallInfoToStr(const FunctionCallInfo fcinfo);
     static std::string procInfoToStr(const plcProcInfo *proc);
     static std::string typeInfoToStr(const plcTypeInfo *type);
