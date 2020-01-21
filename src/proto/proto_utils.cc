@@ -41,9 +41,7 @@ char *plc_datum_as_array(Datum input, plcTypeInfo *type) {
 }
 
 Datum plc_datum_from_array(char *input, plcTypeInfo *type) {
-    (void) input;
-    (void) type;
-    return Datum(0);
+    return PLContainerProtoUtils::DatumFromProtoData(*(ArrayData *)input, type);
 }
 
 PlcDataType PLContainerProtoUtils::GetDataType(const plcTypeInfo *type) {
@@ -242,7 +240,7 @@ void PLContainerProtoUtils::DatumAsProtoArrayOrSetOf(Datum input, const plcTypeI
     }
 }
 
-Datum PLContainerProtoUtils::DatumFromProtoData(const ScalarData &sd, plcTypeInfo *type) {
+Datum PLContainerProtoUtils::DatumFromProtoData(const ScalarData &sd, plcTypeInfo *type, bool isArrayElement) {
     Datum retresult = (Datum)0;
 
     if (sd.isnull()) {
@@ -289,7 +287,11 @@ Datum PLContainerProtoUtils::DatumFromProtoData(const ScalarData &sd, plcTypeInf
     }
 
     if (buffer) {
-        retresult = type->infunc(buffer, type);
+        if (!isArrayElement) {
+            retresult = type->infunc(buffer, type);
+        } else {
+            retresult = type->infunc((char *)&buffer, type);
+        }
         pfree(buffer);
     }
 
@@ -327,4 +329,42 @@ Datum PLContainerProtoUtils::DatumFromProtoData(const CompositeData &cd, plcType
     pfree(nulls);
 
     return HeapTupleGetDatum(tuple);
+}
+
+Datum PLContainerProtoUtils::DatumFromProtoData(const ArrayData &ad, plcTypeInfo *type) {
+    Datum retresult = (Datum)0;
+    int         dims[1];
+    int         lbs[1];
+
+    plcTypeInfo *subType = &type->subTypes[0];
+    int nelems = ad.values_size();
+    dims[0] = nelems;
+    lbs[0] = 1;
+
+    Datum *elems = (Datum *)palloc(nelems * sizeof(Datum));
+    bool *nulls = (bool *)palloc(nelems * sizeof(bool));
+    for (int i=0;i<nelems;i++) {
+        if (subType->type == PLC_DATA_UDT) {
+            elog(ERROR, "DatumFromProtoData for setof is not implemented.");
+        } else {
+            elems[i] = PLContainerProtoUtils::DatumFromProtoData(ad.values(i), subType, true);
+            nulls[i] = ad.values(i).isnull();
+        }
+    }
+
+    ArrayType *array = construct_md_array(elems,
+                                        nulls,
+                                        1,
+                                        dims,
+                                        lbs,
+                                        subType->typeOid,
+                                        subType->typlen,
+                                        subType->typbyval,
+                                        subType->typalign);
+
+    retresult = PointerGetDatum(array);
+
+    pfree(elems);
+
+    return retresult;
 }

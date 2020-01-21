@@ -82,10 +82,6 @@ void PLContainerClient::initCallRequestArgument(const FunctionCallInfo fcinfo, c
     }
 
     plc_elog(DEBUG1, "array data parse result:%s", arg.DebugString().c_str());
-
-    // TODO will be enabled once the RServer array type done.
-
-    plc_elog(ERROR, "init call request for array type has not implemented.");
 }
 
 void PLContainerClient::initCallRequestArgument(const FunctionCallInfo fcinfo, const plcProcInfo *proc, int argIdx, CompositeData &arg) {
@@ -104,9 +100,6 @@ void PLContainerClient::initCallRequestArgument(const FunctionCallInfo fcinfo, c
     }
 
     plc_elog(DEBUG1, "composite data parse result:%s", arg.DebugString().c_str());
-
-    // TODO will be enabled once the RServer composite type done.
-    //plc_elog(ERROR, "init call request for composite type has not implemented.");
 }
 
 void PLContainerClient::initCallRequestArgument(const FunctionCallInfo fcinfo, const plcProcInfo *proc, int argIdx, SetOfData &arg) {
@@ -178,7 +171,10 @@ void PLContainerClient::InitCallRequest(const FunctionCallInfo fcinfo, const plc
 }
 
 void PLContainerClient::setFunctionReturnType(::plcontainer::ReturnType* rettype, const plcTypeInfo *type) {
-    PlcDataType rt = PLContainerProtoUtils::GetDataType(type); 
+    PlcDataType rt = PLContainerProtoUtils::GetDataType(type);
+    if (rt == SETOF) {
+        plc_elog(ERROR, "setof return type is not implemented.");
+    } 
     rettype->set_type(rt);
     if (rt == ARRAY || rt == COMPOSITE || rt == SETOF) {
         const plcTypeInfo *t = (rt == SETOF ? &type->subTypes[0] : type);
@@ -228,9 +224,9 @@ Datum PLContainerClient::getCallResponseAsDatum(const FunctionCallInfo fcinfo, p
         strncpy(buffer, response.stringvalue().c_str(), response.stringvalue().size()+1);
         break;
     case PLC_DATA_BYTEA:
-        buffer = (char *)palloc(response.stringvalue().size()+sizeof(int32_t));
-        *(int32_t *)buffer = response.stringvalue().size();
-        memcpy(buffer+sizeof(int32_t), response.stringvalue().data(), response.stringvalue().size());
+        buffer = (char *)palloc(response.byteavalue().size()+sizeof(int32_t));
+        *(int32_t *)buffer = response.byteavalue().size();
+        memcpy(buffer+sizeof(int32_t), response.byteavalue().data(), response.byteavalue().size());
         break;
     default:
         plc_elog(ERROR, "unknown scalar type:%d", proc->result.type);
@@ -245,11 +241,12 @@ Datum PLContainerClient::getCallResponseAsDatum(const FunctionCallInfo fcinfo, p
 }
 
 Datum PLContainerClient::getCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const ArrayData &response) {
-    (void) fcinfo;
-    (void) proc;
-    (void) response;
-    plc_elog(ERROR, "Array type of response data is not supported yet."); 
-    return (Datum)0; 
+    if (response.values_size() == 0) {
+        return (Datum)0;
+    } else {
+        fcinfo->isnull = false;
+        return proc->result.infunc((char *)&response, &proc->result);
+    }
 }
 
 Datum PLContainerClient::getCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const CompositeData &response) {
@@ -265,8 +262,8 @@ Datum PLContainerClient::getCallResponseAsDatum(const FunctionCallInfo fcinfo, p
     (void) fcinfo;
     (void) proc;
     (void) response;
-    plc_elog(ERROR, "SetOf type of response data is not supported yet."); 
-    return (Datum)0; 
+    plc_elog(ERROR, "SetOf type of response data is not supported yet.");
+    return (Datum)0;
 }
 
 Datum PLContainerClient::GetCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const CallResponse &response) {

@@ -1,36 +1,36 @@
 set datestyle='ISO,MDY';
 select rtestudt3( array[(1,1,'a'), (2,2,'b'), (3,3,'c')]::test_type3[] );
-ERROR:  plcontainer log: init call request for setof type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for setof type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rtestudt3"
 select rtestudt4( array[
                 (1,array[1,2,3],array['a','b','c']),
                 (2,array[2,3,4],array['b','c','d']),
                 (3,array[3,4,5],array['c','d','e'])
             ]::test_type4[] );
-ERROR:  plcontainer log: init call request for setof type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: invalid data type 7 in sclar data (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rtestudt4"
 select rtestudt5(null::test_type4[]);
-ERROR:  plcontainer log: init call request for setof type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: init call request for setof type has not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rtestudt5"
 select rtestudt5(array[null]::test_type4[]);
-ERROR:  plcontainer log: init call request for setof type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  cache lookup failed for type 2113929216 (typcache.c:198)
 CONTEXT:  PLContainer function "rtestudt5"
 select rtestudt7();
-ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unsupport return type 7  stacktrace: (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: setof return type is not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rtestudt7"
 --start_ignore
 select rtestudt9();
-ERROR:  plcontainer log: plcontainer_function_handler not support fn_retset (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: plcontainer_function_handler not support fn_retset (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rtestudt9"
 --end_ignore
 select rtestudt10();
-ERROR:  plcontainer log: plcontainer function call failed. error:R Server Runtime Warning R Server Logs, WARNING, Unsupport return type 7  stacktrace: (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: setof return type is not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rtestudt10"
 select * from unnest(rtestudt14( array[(1,1,'a'), (2,2,'b'), (3,3,'c')]::test_type3[] ));
-ERROR:  plcontainer log: init call request for setof type has not implemented. (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: setof return type is not implemented. (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rtestudt14"
 --start_ignore
 select * from rtestudt15( array[(1,1,'a'), (2,2,'b'), (3,3,'c')]::test_type3[] );
-ERROR:  plcontainer log: plcontainer_function_handler not support fn_retset (comm_dummy_plc.c:24)
+ERROR:  plcontainer log: plcontainer_function_handler not support fn_retset (comm_dummy_plc.c:30)
 CONTEXT:  PLContainer function "rtestudt15"
 --end_ignore
