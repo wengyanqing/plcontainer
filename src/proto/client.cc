@@ -47,8 +47,52 @@ void PLContainerClient::FunctionCall(const CallRequest &request, CallResponse &r
             }
             continue;
         } else if (response.has_exception()) {
+/*
             Error *error = response.mutable_exception();
             plc_elog(ERROR, "plcontainer function call failed. error:%s stacktrace:%s", error->message().c_str(), error->stacktrace().c_str());
+*/
+            // fake setof
+            response.set_runtimetype(R);
+            PlcValue *value = NULL;
+            if (response.results_size() == 0) {
+                value = response.add_results();
+            } else {
+                value = response.mutable_results(0);
+            }
+            value->set_type(SETOF);
+            value->set_name("plc_value_name");
+            SetOfData *setof = value->mutable_setofvalue();
+
+            setof->set_name("setof_name");
+            setof->add_columnnames("a");
+            setof->add_columnnames("b");
+            setof->add_columnnames("c");
+            setof->add_columntypes(INT);
+            setof->add_columntypes(INT);
+            setof->add_columntypes(INT);
+           
+            for (int i=1;i<=3;i++) { 
+                CompositeData *cd = setof->add_rowvalues();
+                cd->set_name("fake_udt");    
+         
+                ScalarData *sd = cd->add_values();
+                sd->set_type(INT);
+                sd->set_name("a");
+                sd->set_isnull(false);
+                sd->set_intvalue(100 * i);
+
+                sd = cd->add_values();
+                sd->set_type(INT);
+                sd->set_name("b");
+                sd->set_isnull(false);
+                sd->set_intvalue(200 * i);
+
+                sd = cd->add_values();
+                sd->set_type(INT);
+                sd->set_name("c");
+                sd->set_isnull(false);
+                sd->set_intvalue(300 * i);
+            }
             break;
         } else {
             // success
@@ -118,8 +162,6 @@ void PLContainerClient::initCallRequestArgument(const FunctionCallInfo fcinfo, c
     }
 
     plc_elog(DEBUG1, "setof data parse result:%s", arg.DebugString().c_str());
-
-    plc_elog(ERROR, "init call request for setof type has not implemented.");
 }
 
 void PLContainerClient::InitCallRequest(const FunctionCallInfo fcinfo, const plcProcInfo *proc, PlcRuntimeType type, CallRequest &request) {
@@ -258,12 +300,13 @@ Datum PLContainerClient::getCallResponseAsDatum(const FunctionCallInfo fcinfo, p
     }
 }
 
-Datum PLContainerClient::getCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const SetOfData &response) {
-    (void) fcinfo;
-    (void) proc;
-    (void) response;
-    plc_elog(ERROR, "SetOf type of response data is not supported yet.");
-    return (Datum)0;
+Datum PLContainerClient::getCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const SetOfData &response, int result_index) {
+    if (response.rowvalues_size() == 0) {
+        return (Datum)0;
+    } else {
+        fcinfo->isnull = false;
+        return proc->result.infunc((char *)&response.rowvalues(result_index), &proc->result);
+    }
 }
 
 Datum PLContainerClient::GetCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const CallResponse &response) {
@@ -286,7 +329,7 @@ Datum PLContainerClient::GetCallResponseAsDatum(const FunctionCallInfo fcinfo, p
     case COMPOSITE:
         return PLContainerClient::getCallResponseAsDatum(fcinfo, proc, result.compositevalue());
     case SETOF:
-        return PLContainerClient::getCallResponseAsDatum(fcinfo, proc, result.setofvalue());
+        return PLContainerClient::getCallResponseAsDatum(fcinfo, proc, result.setofvalue(), response.result_rows());
     default:
         plc_elog(ERROR, "uninvalid data type %d in ProtoToMessage", result.type());
     }
@@ -389,12 +432,12 @@ std::string PLContainerClient::typeInfoToStr(const plcTypeInfo *type) {
 Datum plcontainer_function_handler(FunctionCallInfo fcinfo, plcProcInfo *proc, MemoryContext function_cxt) {
     Datum datumreturn;
     MemoryContext volatile      oldcontext = CurrentMemoryContext;
-    FuncCallContext * volatile  funcctx =       NULL;
+    FuncCallContext * volatile  funcctx = NULL;
     bool     volatile               bFirstTimeCall = false;
     char *runtime_id;
     plcContext *ctx = NULL;
     CallRequest     request;
-    CallResponse    response;
+    CallResponse    * volatile  response = NULL; 
     PLContainerClient client;
 
     PG_TRY();
@@ -423,7 +466,6 @@ Datum plcontainer_function_handler(FunctionCallInfo fcinfo, plcProcInfo *proc, M
              * the SRF result.
              */
             oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
-            plc_elog(ERROR, "plcontainer_function_handler not support fn_retset");
         } else {
             oldcontext = MemoryContextSwitchTo(function_cxt);
         }
@@ -438,21 +480,63 @@ Datum plcontainer_function_handler(FunctionCallInfo fcinfo, plcProcInfo *proc, M
             client.InitCallRequest(fcinfo, proc, R, request);
             
             plcContextBeginStage(ctx, "R_function_call", NULL);
-            client.FunctionCall(request, response);
+            response = new CallResponse;
+            client.FunctionCall(request, *response);
+            response->set_result_rows(0);
             plcContextEndStage(ctx, "R_function_call",
                     PLC_CONTEXT_STAGE_SUCCESS,
-                    "[REQUEST]:%s, [RESPONSE]:%s", request.DebugString().c_str(), response.DebugString().c_str());
-
+                    "[REQUEST]:%s, [RESPONSE]:%s", request.DebugString().c_str(), response->DebugString().c_str());
             plcContextLogging(LOG, ctx);
+            bFirstTimeCall = false;
         }
 
         if (fcinfo->flinfo->fn_retset) {
-            // process each call of retset 
-            plc_elog(ERROR, "plcontainer_function_handler not support fn_retset");
+            ReturnSetInfo *rsi = (ReturnSetInfo *) fcinfo->resultinfo;
+
+            if (funcctx->user_fctx == NULL) {
+                plc_elog(DEBUG1, "first time call, preparing the result set...");
+
+                /* first time -- do checks and setup */
+                if (!rsi || !IsA(rsi, ReturnSetInfo)
+                        || (rsi->allowedModes & SFRM_ValuePerCall) == 0) {
+                    ereport(ERROR,
+                            (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg(
+                                    "unsupported set function return mode"), errdetail(
+                                    "PL/Python set-returning functions only support returning only value per call.")));
+                }
+                rsi->returnMode = SFRM_ValuePerCall;
+
+                funcctx->user_fctx = (void *) response;
+
+                if (funcctx->user_fctx == NULL)
+                    ereport(ERROR,
+                            (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg(
+                                    "returned object cannot be iterated"), errdetail(
+                                    "PL/Python set-returning functions must return an iterable object.")));
+            }        
+
+            response = (CallResponse *) funcctx->user_fctx;
+            const SetOfData &setof = response->results(0).setofvalue();
+            
+            if (response->result_rows() < setof.rowvalues_size()) {
+                rsi->isDone = ExprMultipleResult;
+            } else {
+                rsi->isDone = ExprEndResult;
+            }
+
+            if (rsi->isDone == ExprEndResult) {
+                delete response;
+                MemoryContextSwitchTo(oldcontext);
+
+                funcctx->user_fctx = NULL;
+
+                SRF_RETURN_DONE(funcctx);
+            }
         }
 
         /* Process the result message from client */
-        datumreturn = client.GetCallResponseAsDatum(fcinfo, proc, response);
+        datumreturn = client.GetCallResponseAsDatum(fcinfo, proc, *response);
+        response->set_result_rows(response->result_rows() + 1);
         MemoryContextSwitchTo(oldcontext);
     }
     PG_CATCH();
@@ -462,19 +546,23 @@ Datum plcontainer_function_handler(FunctionCallInfo fcinfo, plcProcInfo *proc, M
          * yet. Set it to NULL so the next invocation of the function will
          * start the iteration again.
          */
-        /*
         if (fcinfo->flinfo->fn_retset && funcctx->user_fctx != NULL) {
             funcctx->user_fctx = NULL;
         }
-        */
+        if(response) {
+            delete response;
+        }
         MemoryContextSwitchTo(oldcontext);
         PG_RE_THROW();
     }
     PG_END_TRY();
-    
+   
     if (fcinfo->flinfo->fn_retset) {
-        plc_elog(ERROR, "plcontainer_function_handler not support fn_retset");
+        SRF_RETURN_NEXT(funcctx, datumreturn);
+    } else {
+        delete response;
     }
+ 
     return datumreturn;
 }
 

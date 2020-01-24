@@ -199,10 +199,6 @@ void PLContainerProtoUtils::DatumAsProtoArrayOrSetOf(Datum input, const plcTypeI
     char *data = ARR_DATA_PTR(array);
     plcTypeInfo *elementType = &type->subTypes[0];
 
-    if (!isSetOf) {
-        ad->set_elementtype(PLContainerProtoUtils::GetDataType(elementType));
-    }
-
     Datum itemvalue;
     int curitem = 0;
 
@@ -236,6 +232,15 @@ void PLContainerProtoUtils::DatumAsProtoArrayOrSetOf(Datum input, const plcTypeI
                 bitmap++;
                 bitmask = 1;
             }
+        }
+    }
+
+    if (!isSetOf) {
+        ad->set_elementtype(PLContainerProtoUtils::GetDataType(elementType));
+    } else if (setof->rowvalues_size() > 0) {
+        for (int i=0;i<setof->rowvalues(0).values_size();i++) {
+            setof->add_columnnames(setof->rowvalues(0).values(i).name());
+            setof->add_columntypes(setof->rowvalues(0).values(i).type());
         }
     }
 }

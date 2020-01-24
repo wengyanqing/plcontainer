@@ -56,7 +56,7 @@ private:
     static Datum getCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const ScalarData &response);
     static Datum getCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const ArrayData &response);
     static Datum getCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const CompositeData &response);
-    static Datum getCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const SetOfData &response);
+    static Datum getCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const SetOfData &response, int result_index);
 
     static void setFunctionReturnType(::plcontainer::ReturnType* rettype, const plcTypeInfo *type);
 
