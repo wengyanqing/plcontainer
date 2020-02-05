@@ -41,7 +41,13 @@ char *plc_datum_as_array(Datum input, plcTypeInfo *type) {
 }
 
 Datum plc_datum_from_array(char *input, plcTypeInfo *type) {
-    return PLContainerProtoUtils::DatumFromProtoData(*(ArrayData *)input, type);
+    if (type && type->nSubTypes > 0 && type->subTypes[0].type == PLC_DATA_UDT) {
+        // array of UDT
+        return PLContainerProtoUtils::DatumFromProtoData(*(SetOfData *)input, type);
+    } else {
+        // array of Scalar
+        return PLContainerProtoUtils::DatumFromProtoData(*(ArrayData *)input, type);
+    }
 }
 
 PlcDataType PLContainerProtoUtils::GetDataType(const plcTypeInfo *type) {
@@ -199,10 +205,6 @@ void PLContainerProtoUtils::DatumAsProtoArrayOrSetOf(Datum input, const plcTypeI
     char *data = ARR_DATA_PTR(array);
     plcTypeInfo *elementType = &type->subTypes[0];
 
-    if (!isSetOf) {
-        ad->set_elementtype(PLContainerProtoUtils::GetDataType(elementType));
-    }
-
     Datum itemvalue;
     int curitem = 0;
 
@@ -217,25 +219,33 @@ void PLContainerProtoUtils::DatumAsProtoArrayOrSetOf(Datum input, const plcTypeI
      
             if (bitmap && (*bitmap & bitmask) == 0) {
                 PLContainerProtoUtils::SetScalarValue(*sd, elementType->typeName, true, elementType, NULL);
-                break;
             } else {
                 itemvalue = fetch_att(data, elementType->typbyval, elementType->typlen);
                 PLContainerProtoUtils::SetScalarValue(*sd, elementType->typeName, false, elementType, elementType->outfunc(itemvalue, elementType));
+                data = att_addlength_pointer(data, elementType->typlen, data);
+                data = (char *) att_align_nominal(data, elementType->typalign);
             }
         } else {
             PLContainerProtoUtils::DatumAsProtoData(PointerGetDatum(data), elementType, *setof->add_rowvalues());
+            data = att_addlength_pointer(data, elementType->typlen, data);
+            data = (char *) att_align_nominal(data, elementType->typalign);
         }
 
-        data = att_addlength_pointer(data, elementType->typlen, data);
-        data = (char *) att_align_nominal(data, elementType->typalign);
-
-        // TODO advance bitmap pointer if any
         if (bitmap) {
             bitmask <<= 1;
             if (bitmask == 0x100 ) {
                 bitmap++;
                 bitmask = 1;
             }
+        }
+    }
+
+    if (!isSetOf) {
+        ad->set_elementtype(PLContainerProtoUtils::GetDataType(elementType));
+    } else if (setof->rowvalues_size() > 0) {
+        for (int i=0;i<setof->rowvalues(0).values_size();i++) {
+            setof->add_columnnames(setof->rowvalues(0).values(i).name());
+            setof->add_columntypes(setof->rowvalues(0).values(i).type());
         }
     }
 }
@@ -344,11 +354,13 @@ Datum PLContainerProtoUtils::DatumFromProtoData(const ArrayData &ad, plcTypeInfo
     Datum *elems = (Datum *)palloc(nelems * sizeof(Datum));
     bool *nulls = (bool *)palloc(nelems * sizeof(bool));
     for (int i=0;i<nelems;i++) {
-        if (subType->type == PLC_DATA_UDT) {
-            elog(ERROR, "DatumFromProtoData for setof is not implemented.");
-        } else {
+        nulls[i] = ad.values(i).isnull();
+        if (ad.values(i).isnull()) {
+            elems[i] = Datum(0);
+        } else if (subType->type == PLC_DATA_TEXT || subType->type == PLC_DATA_BYTEA) {
             elems[i] = PLContainerProtoUtils::DatumFromProtoData(ad.values(i), subType, true);
-            nulls[i] = ad.values(i).isnull();
+        } else {
+            elems[i] = PLContainerProtoUtils::DatumFromProtoData(ad.values(i), subType, false);
         }
     }
 
@@ -365,6 +377,42 @@ Datum PLContainerProtoUtils::DatumFromProtoData(const ArrayData &ad, plcTypeInfo
     retresult = PointerGetDatum(array);
 
     pfree(elems);
+    pfree(nulls);
+
+    return retresult;
+}
+
+Datum PLContainerProtoUtils::DatumFromProtoData(const SetOfData &ad, plcTypeInfo *type) {
+    Datum retresult = (Datum)0;
+    int         dims[1];
+    int         lbs[1];
+
+    plcTypeInfo *subType = &type->subTypes[0];
+    int nelems = ad.rowvalues_size();
+    dims[0] = nelems;
+    lbs[0] = 1;
+
+    Datum *elems = (Datum *)palloc(nelems * sizeof(Datum));
+    bool *nulls = (bool *)palloc(nelems * sizeof(bool));
+    for (int i=0;i<nelems;i++) {
+        elems[i] = PLContainerProtoUtils::DatumFromProtoData(ad.rowvalues(i), subType);
+        nulls[i] = false; 
+    }
+
+    ArrayType *array = construct_md_array(elems,
+                                        nulls,
+                                        1,
+                                        dims,
+                                        lbs,
+                                        subType->typeOid,
+                                        subType->typlen,
+                                        subType->typbyval,
+                                        subType->typalign);
+
+    retresult = PointerGetDatum(array);
+
+    pfree(elems);
+    pfree(nulls);
 
     return retresult;
 }

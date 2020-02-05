@@ -77,17 +77,17 @@ select rlogging2();
 \! psql -d ${PL_TESTDB} -c "select rlogging_fatal();"
 
 --start_ignore
-select rsetofint4();
-select rsetofint8();
-select rsetofint2();
-select rsetoffloat4();
-select rsetoffloat8();
-select rsetoftext();
-
-select rsetoffloat8array();
-select rsetofint4array();
-select rsetofint8array();
-select rsetoftextarray();
+--select rsetofint4();
+--select rsetofint8();
+--select rsetofint2();
+--select rsetoffloat4();
+--select rsetoffloat8();
+--select rsetoftext();
+--
+--select rsetoffloat8array();
+--select rsetofint4array();
+--select rsetofint8array();
+--select rsetoftextarray();
 --end_ignore
 
 select runargs1('foo');
@@ -99,22 +99,22 @@ select rnested_call_three('foo');
 select rnested_call_two('foobar');
 select rnested_call_one('foo1');
 select rtestudt1( ('t', 1, 2, 3, 4, 5, 6, 'foobar')::test_type );
-select rtestudt2( (
-        array[true,false,true]::bool[],
-        array[1,2,3]::smallint[],
-        array[2,3,4]::int[],
-        array[3,4,5]::int8[],
-        array[4.5,5.5,6.5]::float4[],
-        array[5.5,6.5,7.5]::float8[],
-        array[6.5,7.5,8.5]::numeric[],
-        array['a','b','c']::varchar[])::test_type2 );
+--select rtestudt2( (
+--        array[true,false,true]::bool[],
+--        array[1,2,3]::smallint[],
+--        array[2,3,4]::int[],
+--        array[3,4,5]::int8[],
+--        array[4.5,5.5,6.5]::float4[],
+--        array[5.5,6.5,7.5]::float8[],
+--        array[6.5,7.5,8.5]::numeric[],
+--        array['a','b','c']::varchar[])::test_type2 );
 
 select rtestudt6a();
 select rtestudt6b();
 --start_ignore
-select rtestudt8();
-select rtestudt11();
-select * from rtestudt13( (1,2,'a')::test_type3 );
+--select rtestudt8();
+--select rtestudt11();
+--select * from rtestudt13( (1,2,'a')::test_type3 );
 --end_ignore
 
 --select paster('{hello, happy}','{world, birthday}',' ');

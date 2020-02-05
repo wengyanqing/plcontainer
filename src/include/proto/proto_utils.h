@@ -14,7 +14,8 @@ public:
     static Datum DatumFromProtoData(const ScalarData    &sd, plcTypeInfo *type, bool isArrayElement = false);
     static Datum DatumFromProtoData(const CompositeData &cd, plcTypeInfo *type);
     static Datum DatumFromProtoData(const ArrayData &ad, plcTypeInfo *type);
-    
+    static Datum DatumFromProtoData(const SetOfData &ad, plcTypeInfo *type);
+ 
     static void SetScalarValue(ScalarData &data, const char *name, bool isnull, const plcTypeInfo *type, const char *value);
     static PlcDataType GetDataType(const plcTypeInfo *type);
 private:
