@@ -122,4 +122,5 @@ message CallResponse {
     repeated    PlcValue    results = 2;
     Error       exception = 3;
     string      logs = 4;
+    int32       result_rows = 5;
 }
