@@ -62,6 +62,8 @@ static char *plc_datum_as_text(Datum input, plcTypeInfo *type);
 
 static char *plc_datum_as_bytea(Datum input, plcTypeInfo *type);
 
+static char *plc_datum_as_void(Datum input, plcTypeInfo *type);
+
 static Datum plc_datum_from_int1(char *input, plcTypeInfo *type);
 
 static Datum plc_datum_from_int2(char *input, plcTypeInfo *type);
@@ -85,6 +87,8 @@ static Datum plc_datum_from_bytea(char *input, plcTypeInfo *type);
 static Datum plc_datum_from_bytea_ptr(char *input, plcTypeInfo *type);
 
 static Datum plc_datum_from_udt_ptr(char *input, plcTypeInfo *type);
+
+static Datum plc_datum_from_void(char *input, plcTypeInfo *type);
 
 static void
 fill_type_info_inner(FunctionCallInfo fcinfo, Oid typeOid, plcTypeInfo *type, bool isArrayElement, bool isUDTElement) {
@@ -171,6 +175,11 @@ fill_type_info_inner(FunctionCallInfo fcinfo, Oid typeOid, plcTypeInfo *type, bo
 				type->infunc = plc_datum_from_bytea_ptr;
 			}
 			break;
+        case VOIDOID:
+            type->type = PLC_DATA_VOID;
+            type->outfunc = plc_datum_as_void;
+            type->infunc = plc_datum_from_void;
+            break;
 			/* All the other types are passed through in-out functions to translate
 			 * them to text before sending and after receiving */
 		default:
@@ -351,6 +360,10 @@ static char *plc_datum_as_bytea(Datum input, pg_attribute_unused() plcTypeInfo *
 	return out;
 }
 
+static char *plc_datum_as_void(pg_attribute_unused() Datum input, pg_attribute_unused() plcTypeInfo *type) {
+    return (char *)pstrdup(""); 
+}
+
 static Datum plc_datum_from_int1(char *input, pg_attribute_unused() plcTypeInfo *type) {
 	return BoolGetDatum(*((bool *) input));
 }
@@ -409,6 +422,10 @@ static Datum plc_datum_from_bytea_ptr(char *input, plcTypeInfo *type) {
 
 static Datum plc_datum_from_udt_ptr(char *input, plcTypeInfo *type) {
 	return plc_datum_from_udt(*((char **) input), type);
+}
+
+static Datum plc_datum_from_void(pg_attribute_unused() char *input, pg_attribute_unused() plcTypeInfo *type) {
+    return (Datum)0;
 }
 
 plcDatatype plc_get_datatype_from_oid(Oid oid) {

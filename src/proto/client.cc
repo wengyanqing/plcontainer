@@ -120,6 +120,24 @@ void PLContainerClient::initCallRequestArgument(const FunctionCallInfo fcinfo, c
     plc_elog(DEBUG1, "setof data parse result:%s", arg.DebugString().c_str());
 }
 
+void PLContainerClient::InitCallRequest(const FunctionCallInfo fcinfo, PlcRuntimeType type, CallRequest &request) {
+    const InlineCodeBlock * const icb = (InlineCodeBlock *)PG_GETARG_POINTER(0);
+    plc_elog(DEBUG1, "plcontainer inline function :%s, source_text:%s",
+            PLContainerClient::functionCallInfoToStr(fcinfo).c_str(),
+            icb->source_text);
+
+    request.set_runtimetype(type);
+    request.set_haschanged(1);
+    request.mutable_proc()->set_src(icb->source_text);
+    request.set_loglevel(log_min_messages);
+    request.mutable_rettype()->set_type(VOID);
+    if (GetDatabaseEncoding() == PG_SQL_ASCII) {
+        request.set_serverenc("ascii");
+    } else {
+        request.set_serverenc(GetDatabaseEncodingName());
+    }
+}
+
 void PLContainerClient::InitCallRequest(const FunctionCallInfo fcinfo, const plcProcInfo *proc, PlcRuntimeType type, CallRequest &request) {
     plc_elog(DEBUG1, "fcinfo is :%s", PLContainerClient::functionCallInfoToStr(fcinfo).c_str());
     plc_elog(DEBUG1, "proc is %s", PLContainerClient::procInfoToStr(proc).c_str());
@@ -161,6 +179,9 @@ void PLContainerClient::InitCallRequest(const FunctionCallInfo fcinfo, const plc
             break;
         case SETOF:
             PLContainerClient::initCallRequestArgument(fcinfo, proc, i, *arg->mutable_setofvalue());
+            break;
+        case VOID:
+            // do nothing for void type
             break;
         default:
             plc_elog(ERROR, "invalid data type %d in argument %d in InitCallRequest", arg->type(), i);
@@ -297,6 +318,9 @@ Datum PLContainerClient::GetCallResponseAsDatum(const FunctionCallInfo fcinfo, p
         return PLContainerClient::getCallResponseAsDatum(fcinfo, proc, result.compositevalue());
     case SETOF:
         return PLContainerClient::getCallResponseAsDatum(fcinfo, proc, result.setofvalue(), response.result_rows());
+    case VOID:
+        // return void will do nothing 
+        break;
     default:
         plc_elog(ERROR, "uninvalid data type %d in ProtoToMessage", result.type());
     }
@@ -316,13 +340,30 @@ std::string PLContainerClient::functionCallInfoToStr(const FunctionCallInfo fcin
     }
     argnull = argnull.substr(0, argnull.length()-1);
 
+    char flinfo[512];
+    snprintf(flinfo, sizeof(flinfo),
+                    "flinfo->fn_addr:%p "
+                    "flinfo->fn_oid:%d "
+                    "flinfo->fn_nargs:%d "
+                    "flinfo->fn_strict:%d "
+                    "flinfo->fn_retset:%d "
+                    "flinfo->fn_stats:%d",
+                    fcinfo->flinfo->fn_addr,
+                    fcinfo->flinfo->fn_oid,
+                    fcinfo->flinfo->fn_nargs,
+                    fcinfo->flinfo->fn_strict,
+                    fcinfo->flinfo->fn_retset,
+                    fcinfo->flinfo->fn_stats); 
+
     snprintf(result, sizeof(result), 
                     "fcinfo->isnull:%d "
                     "fcinfo->nargs:%d "
-                    "fcinfo->argnull:[%s]",
+                    "fcinfo->argnull:[%s] "
+                    "fcinfo->flinfo:%s",
                     fcinfo->isnull,
                     fcinfo->nargs,
-                    argnull.c_str());
+                    argnull.c_str(),
+                    flinfo);
     return std::string(result);
 }
 
@@ -532,6 +573,49 @@ Datum plcontainer_function_handler(FunctionCallInfo fcinfo, plcProcInfo *proc, M
         delete response;
         return datumreturn;
     }
+}
+
+void plcontainer_inline_function_handler(FunctionCallInfo fcinfo, MemoryContext function_cxt) {
+    const InlineCodeBlock * const icb = (InlineCodeBlock *)PG_GETARG_POINTER(0);
+    MemoryContext volatile      oldcontext = CurrentMemoryContext;
+    char *runtime_id;
+    plcContext *ctx = NULL;
+    CallRequest     request;
+    CallResponse    response;
+    PLContainerClient client;
+    
+    PG_TRY();
+    {
+        if (fcinfo->flinfo->fn_retset) {
+            plc_elog(ERROR, "plcontainer inline function could not return setof"); 
+        }
+
+        if (icb == NULL || icb->source_text == NULL) {
+            plc_elog(ERROR, "plcontainer inline function param error");
+        } 
+
+        oldcontext = MemoryContextSwitchTo(function_cxt);
+        runtime_id = parse_container_meta(icb->source_text);
+        ctx = get_container_context(runtime_id);
+        
+        client.Init(ctx);
+        client.InitCallRequest(fcinfo, R, request);
+        
+        plcContextBeginStage(ctx, "R_inline_function", NULL);
+        client.FunctionCall(request, response);
+        plcContextEndStage(ctx, "R_inline_function",
+                    PLC_CONTEXT_STAGE_SUCCESS,
+                    "[REQUEST]:%s, [RESPONSE]:%s", request.DebugString().c_str(), response.DebugString().c_str());
+
+        plcContextLogging(LOG, ctx);
+        MemoryContextSwitchTo(oldcontext);
+    }
+    PG_CATCH();
+    {
+        MemoryContextSwitchTo(oldcontext);
+        PG_RE_THROW();
+    }
+    PG_END_TRY();
 }
 
 int get_new_container_from_coordinator(const char *runtime_id, plcContext *ctx) {

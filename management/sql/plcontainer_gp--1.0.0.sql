@@ -4,7 +4,18 @@ CREATE OR REPLACE FUNCTION plcontainer_call_handler()
 RETURNS LANGUAGE_HANDLER
 AS '$libdir/plcontainer' LANGUAGE C;
 
-CREATE TRUSTED LANGUAGE plcontainer HANDLER plcontainer_call_handler;
+CREATE FUNCTION plcontainer_inline_handler(internal)
+RETURNS VOID
+AS '$libdir/plcontainer' LANGUAGE C STRICT;
+
+CREATE FUNCTION plcontainer_validator(oid)
+RETURNS VOID
+AS '$libdir/plcontainer' LANGUAGE C STRICT;
+
+CREATE TRUSTED LANGUAGE plcontainer 
+HANDLER plcontainer_call_handler
+INLINE plcontainer_inline_handler
+VALIDATOR plcontainer_validator;
 
 -- Defining container configuration management functions
 
