@@ -43,6 +43,7 @@ public:
 
     void FunctionCall(const CallRequest &request, CallResponse &response);
 
+    static void InitCallRequest(const FunctionCallInfo fcinfo, PlcRuntimeType type, CallRequest &request);
     static void InitCallRequest(const FunctionCallInfo fcinfo, const plcProcInfo *proc, PlcRuntimeType type, CallRequest &request);
 
     static Datum GetCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const CallResponse &response);

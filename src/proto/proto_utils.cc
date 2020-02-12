@@ -77,6 +77,9 @@ PlcDataType PLContainerProtoUtils::GetDataType(const plcTypeInfo *type) {
     case PLC_DATA_UDT:
         ret = COMPOSITE;
         break;
+    case PLC_DATA_VOID:
+        ret = VOID;
+        break;
     default:
         plc_elog(ERROR, "unknown data type %d of plcType", type->type);
     }

@@ -26,6 +26,8 @@ test: test_r_error
 # test: exception
 # test: faultinject_python
 
+test: do_r
+
 # test wrong configuration validation in pl/container C code
 #test: test_wrong_config
 # PL/Container UDA test

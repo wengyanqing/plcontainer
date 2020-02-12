@@ -23,6 +23,7 @@ extern "C"
 
 // C interface definition
 Datum plcontainer_function_handler(FunctionCallInfo fcinfo, plcProcInfo *proc, MemoryContext function_cxt); 
+void  plcontainer_inline_function_handler(FunctionCallInfo fcinfo, MemoryContext function_cxt);
 
 // plcoordinator server
 typedef struct PLCoordinatorServer {

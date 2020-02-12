@@ -54,6 +54,7 @@ enum PlcDataType {
     COMPOSITE = 5;
     ARRAY = 6;
     SETOF = 7;
+    VOID = 99;
     UNKNOWN = 100;
 }
 

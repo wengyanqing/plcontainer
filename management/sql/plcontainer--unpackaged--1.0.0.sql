@@ -10,3 +10,5 @@ DROP TYPE IF EXISTS container_summary_type;
 
 DROP LANGUAGE IF EXISTS plcontainer CASCADE;
 DROP FUNCTION IF EXISTS plcontainer_call_handler();
+DROP FUNCTION IF EXISTS plcontainer_inline_handler(internal);
+DROP FUNCTION IF EXISTS plcontainer_validator(oid);

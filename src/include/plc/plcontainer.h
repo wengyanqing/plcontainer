@@ -13,6 +13,7 @@
 
 /* entrypoint for all plcontainer procedures */
 Datum plcontainer_call_handler(PG_FUNCTION_ARGS);
+Datum plcontainer_inline_handler(PG_FUNCTION_ARGS);
 
 char *plc_top_strdup(const char *str);
 void *top_palloc(size_t bytes);

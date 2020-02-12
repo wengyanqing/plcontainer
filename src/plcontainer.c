@@ -47,6 +47,8 @@ PG_FUNCTION_INFO_V1(plcontainer_validator);
 
 PG_FUNCTION_INFO_V1(plcontainer_call_handler);
 
+PG_FUNCTION_INFO_V1(plcontainer_inline_handler);
+
 static void plpython_error_callback(void *arg);
 
 static char * PLy_procedure_name(plcProcInfo *proc);
@@ -227,3 +229,63 @@ Datum plcontainer_call_handler(PG_FUNCTION_ARGS) {
 
 	return datumreturn;
 }
+
+Datum plcontainer_inline_handler(PG_FUNCTION_ARGS)
+{
+	int ret;
+	ErrorContextCallback plerrcontext;
+
+	/* pl_container_caller_context refer to the CurrentMemoryContext(e.g. ExprContext)
+	 * since SPI_connect() will switch memory context to SPI_PROC, we need
+	 * to switch back to the pl_container_caller_context at plcontainer_inline_functin_hanndler*/
+	pl_container_caller_context = CurrentMemoryContext;
+
+	ret = SPI_connect();
+	if (ret != SPI_OK_CONNECT)
+		plc_elog(ERROR, "[plcontainer] SPI connect error: %d (%s)", ret,
+			SPI_result_code_string(ret));
+
+	/*
+	 * Setup error traceback support for ereport()
+	 */
+	plerrcontext.callback = plpython_error_callback;
+	plerrcontext.previous = error_context_stack;
+	error_context_stack = &plerrcontext;
+
+	/* We need to cover this in try-catch block to catch the even of user
+	 * requesting the query termination. In this case we should forcefully
+	 * kill the container and reset its information
+	 */
+	PG_TRY();
+	{
+		plcontainer_inline_function_handler(fcinfo, pl_container_caller_context);
+	}
+	PG_CATCH();
+	{
+		reset_containers();
+		/* If the reason is Cancel or Termination or Backend error. */
+		if (InterruptPending || QueryCancelPending || QueryFinishPending) {
+			plc_elog(DEBUG1, "Terminating containers due to user request reason("
+				"Flags for debugging: %d %d %d", InterruptPending,
+				QueryCancelPending, QueryFinishPending);
+		}
+		error_context_stack = plerrcontext.previous;
+		PG_RE_THROW();
+	}
+	PG_END_TRY();
+
+	/**
+	 *  SPI_finish() will clear the old memory context. Upstream code place it at earlier
+	 *  part of code, but we need to place it here.
+	 */
+	ret = SPI_finish();
+	if (ret != SPI_OK_FINISH)
+		plc_elog(ERROR, "[plcontainer] SPI finish error: %d (%s)", ret,
+			SPI_result_code_string(ret));
+
+	/* Pop the error context stack */
+	error_context_stack = plerrcontext.previous;
+
+	PG_RETURN_VOID();
+}
+
