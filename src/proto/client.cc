@@ -26,16 +26,18 @@ void PLContainerClient::Init(const plcContext *ctx) {
 }
 
 void PLContainerClient::FunctionCall(const CallRequest &request, CallResponse &response) {
-    int client_connection_timeout = 5;
     std::chrono::system_clock::time_point deadline;
     grpc::Status status; 
     while (true) {
         CHECK_FOR_INTERRUPTS();
 
         grpc::ClientContext context;
-        deadline = std::chrono::system_clock::now() + std::chrono::seconds(client_connection_timeout);
-        context.set_deadline(deadline);
         context.set_wait_for_ready(true);
+
+        if (::plc_client_timeout != -1) {
+            deadline = std::chrono::system_clock::now() + std::chrono::seconds(::plc_client_timeout);
+            context.set_deadline(deadline);
+        }
 
         plc_elog(DEBUG1, "function call request:%s", request.DebugString().c_str());
         status = stub_->FunctionCall(&context, request, &response);

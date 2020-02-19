@@ -74,7 +74,7 @@ CoordinatorConstraint *coordinator_docker_constraint;
 bool plcontainer_stand_alone_mode = true;
 int plc_max_docker_creating_num = 3;
 char *plcontainer_stand_alone_server_path;
-
+int plc_client_timeout = -1;
 
 static int send_message(QeRequest *request);
 static int receive_message();
@@ -380,6 +380,17 @@ _PG_init(void)
 							NULL,
 							NULL,
 							NULL);
+	DefineCustomIntVariable("plcontainer.plc_client_timeout",
+							"The max number of creating dockers at the same time",
+							NULL,
+							&plc_client_timeout,
+							60, -1, 3600,
+							PGC_USERSET,
+							0,
+							NULL,
+							NULL,
+							NULL);
+
     worker.bgw_flags = BGWORKER_SHMEM_ACCESS;
     worker.bgw_start_time = BgWorkerStart_RecoveryFinished;
     worker.bgw_restart_time = BGW_DEFAULT_RESTART_INTERVAL;
