@@ -1,27 +1,28 @@
 #include "client.h"
 #include "proto_utils.h"
 
-PLContainerClient::PLContainerClient(std::shared_ptr<grpc::Channel> channel) {
-    this->stub_ = PLContainer::NewStub(channel);
-}
-
-PLContainerClient::PLContainerClient(const plcContext *ctx) {
-    this->ctx = ctx;
-    std::string uds(ctx->service_address);
-    uds = "unix://" + uds;
-    this->stub_ = PLContainer::NewStub(grpc::CreateChannel(uds, grpc::InsecureChannelCredentials()));
-}
+PLContainerClient *PLContainerClient::client = NULL; 
 
 PLContainerClient::PLContainerClient() {
     this->stub_ = NULL;
     this->ctx = NULL;
 }
 
+PLContainerClient *PLContainerClient::GetPLContainerClient() {
+    if (client == NULL) {
+        client = new PLContainerClient;
+    }
+    return client;
+}
+
 void PLContainerClient::Init(const plcContext *ctx) {
     this->ctx = ctx;
-    std::string uds(ctx->service_address);
-    uds = "unix://" + uds;
-    this->stub_ = PLContainer::NewStub(grpc::CreateChannel(uds, grpc::InsecureChannelCredentials()));
+
+    if (ctx->is_new_ctx) {
+        std::string uds(ctx->service_address);
+        uds = "unix://" + uds;
+        this->stub_ = PLContainer::NewStub(grpc::CreateChannel(uds, grpc::InsecureChannelCredentials()));
+    }
 }
 
 void PLContainerClient::FunctionCall(const CallRequest &request, CallResponse &response) {
@@ -446,7 +447,7 @@ Datum plcontainer_function_handler(FunctionCallInfo fcinfo, plcProcInfo *proc, M
     plcContext *ctx = NULL;
     CallRequest     request;
     CallResponse    * volatile  response = NULL;
-    PLContainerClient client;
+    PLContainerClient * volatile client = NULL;
 
     PG_TRY();
     {
@@ -484,13 +485,14 @@ Datum plcontainer_function_handler(FunctionCallInfo fcinfo, plcProcInfo *proc, M
             /*
              * TODO will be reuse client channel if possible
              */
-            client.Init(ctx);
-            client.InitCallRequest(fcinfo, proc, R, request);
+            client = PLContainerClient::GetPLContainerClient();
+            client->Init(ctx);
+            client->InitCallRequest(fcinfo, proc, R, request);
             response = new CallResponse;
             response->set_result_rows(0);
  
             plcContextBeginStage(ctx, "R_function_call", NULL);
-            client.FunctionCall(request, *response);
+            client->FunctionCall(request, *response);
             plcContextEndStage(ctx, "R_function_call",
                     PLC_CONTEXT_STAGE_SUCCESS,
                     "[REQUEST]:%s, [RESPONSE]:%s", request.DebugString().c_str(), response->DebugString().c_str());
@@ -543,7 +545,7 @@ Datum plcontainer_function_handler(FunctionCallInfo fcinfo, plcProcInfo *proc, M
         }
 
         /* Process the result message from client */
-        datumreturn = client.GetCallResponseAsDatum(fcinfo, proc, *response);
+        datumreturn = client->GetCallResponseAsDatum(fcinfo, proc, *response);
         response->set_result_rows(response->result_rows() + 1);
         MemoryContextSwitchTo(oldcontext);
     }
@@ -582,7 +584,7 @@ void plcontainer_inline_function_handler(FunctionCallInfo fcinfo, MemoryContext 
     plcContext *ctx = NULL;
     CallRequest     request;
     CallResponse    response;
-    PLContainerClient client;
+    PLContainerClient * client = NULL;
     
     PG_TRY();
     {
@@ -597,12 +599,13 @@ void plcontainer_inline_function_handler(FunctionCallInfo fcinfo, MemoryContext 
         oldcontext = MemoryContextSwitchTo(function_cxt);
         runtime_id = parse_container_meta(icb->source_text);
         ctx = get_container_context(runtime_id);
-        
-        client.Init(ctx);
-        client.InitCallRequest(fcinfo, R, request);
+       
+        client = PLContainerClient::GetPLContainerClient(); 
+        client->Init(ctx);
+        client->InitCallRequest(fcinfo, R, request);
         
         plcContextBeginStage(ctx, "R_inline_function", NULL);
-        client.FunctionCall(request, response);
+        client->FunctionCall(request, response);
         plcContextEndStage(ctx, "R_inline_function",
                     PLC_CONTEXT_STAGE_SUCCESS,
                     "[REQUEST]:%s, [RESPONSE]:%s", request.DebugString().c_str(), response.DebugString().c_str());
