@@ -381,7 +381,7 @@ _PG_init(void)
 							NULL,
 							NULL);
 	DefineCustomIntVariable("plcontainer.plc_client_timeout",
-							"The max number of creating dockers at the same time",
+							"The plcontainer client timeout for function call",
 							NULL,
 							&plc_client_timeout,
 							60, -1, 3600,
