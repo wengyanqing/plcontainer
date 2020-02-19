@@ -35,9 +35,7 @@ using namespace plcontainer;
 
 class PLContainerClient {
 public:
-    PLContainerClient(std::shared_ptr<grpc::Channel> channel);
-    PLContainerClient(const plcContext *ctx);
-    PLContainerClient();
+    static PLContainerClient *GetPLContainerClient();
 
     void Init(const plcContext *ctx);
 
@@ -48,7 +46,9 @@ public:
 
     static Datum GetCallResponseAsDatum(const FunctionCallInfo fcinfo, plcProcInfo *proc, const CallResponse &response);
 
-private: 
+private:
+    PLContainerClient();
+ 
     static void initCallRequestArgument(const FunctionCallInfo fcinfo, const plcProcInfo *proc, int argIdx, ScalarData &arg);
     static void initCallRequestArgument(const FunctionCallInfo fcinfo, const plcProcInfo *proc, int argIdx, ArrayData &arg);
     static void initCallRequestArgument(const FunctionCallInfo fcinfo, const plcProcInfo *proc, int argIdx, CompositeData &arg);
@@ -66,6 +66,8 @@ private:
     static std::string typeInfoToStr(const plcTypeInfo *type);
 
 private:
+    static PLContainerClient *client;
+
     std::unique_ptr<PLContainer::Stub> stub_;
     const plcContext  *ctx;
 };

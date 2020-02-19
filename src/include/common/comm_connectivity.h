@@ -11,6 +11,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <time.h>
+#include "messages/message_base.h"
 
 #define DEFAULT_STRING_BUFFER_SIZE 1024
 #define MAX_LOG_LENGTH 1024
@@ -40,6 +41,7 @@ typedef struct plcContext
     plcContextStage stages[MAX_PLC_CONTEXT_STAGE_NUM];
     int current_stage_num;
     int max_stage_num;
+    int is_new_ctx;
 } plcContext;
 
 extern plcContext *global_context;

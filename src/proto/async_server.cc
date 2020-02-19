@@ -139,7 +139,7 @@ void AsyncServer::ProcessRequest(int timeout_seconds) {
             static_cast<Call*>(tag)->Proceed(ok);
             continue;
         } else if (status == CompletionQueue::TIMEOUT) {
-            plc_elog(DEBUG1, "aserver got timeout event, return to caller, ok:%d", ok);
+            plc_elog(DEBUG3, "aserver got timeout event, return to caller, ok:%d", ok);
             break;
         } else if (status == CompletionQueue::SHUTDOWN) {
             plc_elog(LOG, "server got shutdown event, return to caller, ok:%d", ok);
@@ -164,6 +164,6 @@ PLCoordinatorServer *start_server(const char *address) {
 int process_request(PLCoordinatorServer *server, int timeout_seconds) {
     AsyncServer *s = (AsyncServer *)server->server;
     s->ProcessRequest(timeout_seconds);
-    plc_elog(DEBUG1, "server %p timeout in %d seconds", server, timeout_seconds);
+    plc_elog(DEBUG3, "server %p timeout in %d seconds", server, timeout_seconds);
     return 0;
 }

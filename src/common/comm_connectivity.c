@@ -27,6 +27,7 @@ void plcContextInit(plcContext *ctx)
 	ctx->container_id = NULL;
 	ctx->current_stage_num = 0;
 	ctx->max_stage_num = MAX_PLC_CONTEXT_STAGE_NUM;
+	ctx->is_new_ctx = true;
 	global_context = ctx;
 }
 
@@ -38,6 +39,7 @@ void plcContextInit(plcContext *ctx)
 void plcReleaseContext(plcContext *ctx)
 {
 	ctx->current_stage_num = 0;
+	ctx->is_new_ctx = false;
 	global_context = ctx;
 }
 
@@ -49,6 +51,7 @@ void plcReleaseContext(plcContext *ctx)
 void plcContextReset(plcContext *ctx)
 {
 	ctx->current_stage_num = 0;
+	ctx->is_new_ctx = false;
 	global_context = ctx;
 }
 
