@@ -1,0 +1,7 @@
+# plc_coordinator extension
+comment = 'GPDB PL/container batch function scan'
+# this is the install/uninstall script version
+default_version = '1.0.0'
+module_pathname = '$libdir/plc_batch'
+relocatable = true
+superuser = true
