@@ -5,7 +5,7 @@ DATA = plc_batch--1.0.0.sql
 
 EXTENSION = plc_batch
 SRCDIR = ../
-FILES = plcBatch.c nodePlcscan.c plcPlan.c
+FILES = plcBatch.c nodePlcscan.c plcPlan.c execScan.c
 OBJS = $(foreach src,$(FILES),$(subst .c,.o,$(src)))
 
 CXX_FILES=../proto/client.cc ../proto/proto_utils.cc ../proto/plcontainer.pb.cc ../proto/plcontainer.grpc.pb.cc
