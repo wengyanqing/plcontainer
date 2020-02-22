@@ -64,7 +64,7 @@ plcContext *get_container_context(const char *runtime_id)
 	plcContext *newCtx = NULL;
 
 #ifndef PLC_PG
-	SIMPLE_FAULT_INJECTOR("plcontainer_before_container_connected");
+	//SIMPLE_FAULT_INJECTOR("plcontainer_before_container_connected");
 #endif
 	for (i = 0; i < containers_size; i++)
 	{
