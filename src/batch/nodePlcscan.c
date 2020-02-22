@@ -189,7 +189,11 @@ BeginPlcScan(CustomScanState *css, EState *estate, int eflags)
     node = (SeqScan *)linitial(cscan->custom_plans);
 
     pss = (PlcScanState*)css;
+    pss->batch_size = 0;
+    pss->batch_status = PLC_BATCH_UNSTART;
+    pss->cur_batch_scan_num = 0;
     pss->scanFinish = false;
+
 
     pss->seqstate = ExecInitSeqScan(node, estate, eflags);
 

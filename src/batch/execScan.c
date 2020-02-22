@@ -81,11 +81,11 @@ ExecScanFetch(ScanState *node,
 
 
 TupleTableSlot *
-PlcExecScan(PlcScanState *vss,
+PlcExecScan(PlcScanState *pss,
             ExecScanAccessMtd accessMtd,  /* function returning a tuple */
             ExecScanRecheckMtd recheckMtd)
 {
-    ScanState *node = vss->seqstate;
+    ScanState *node = pss->seqstate;
 
     ExprContext *econtext;
     List       *qual;
@@ -97,6 +97,8 @@ PlcExecScan(PlcScanState *vss,
     qual = node->ps.qual;
     projInfo = node->ps.ps_ProjInfo;
     econtext = node->ps.ps_ExprContext;
+
+    TupleDesc   tupDesc = RelationGetDescr(node->ss_currentRelation);
 
     /*
      * If we have neither a qual to check nor a projection to do, just skip
@@ -118,71 +120,116 @@ PlcExecScan(PlcScanState *vss,
      * get a tuple from the access method.  Loop until we obtain a tuple that
      * passes the qualification.
      */
+    TupleTableSlot *slot;
 
-    for (;;)
+    while(true)
     {
-        TupleTableSlot *slot;
-
-        CHECK_FOR_INTERRUPTS();
-
-        if (QueryFinishPending)
-            return NULL;
-
-        slot = ExecScanFetch(node, accessMtd, recheckMtd);
-
-        /*
-         * if the slot returned by the accessMtd contains NULL, then it means
-         * there is nothing more to scan so we just return an empty slot,
-         * being careful to use the projection result slot so it has correct
-         * tupleDesc.
-         */
-        if (TupIsNull(slot))
+        if (pss->batch_status == PLC_BATCH_SCAN_FINISH && pss->scanFinish)
         {
-            if (projInfo)
-                return ExecClearTuple(projInfo->pi_slot);
-            else
-                return slot;
+            elog(NOTICE, "plcontainer scan finish");
+            return NULL;
         }
 
-        /*
-         * place the current tuple into the expr context
-         */
-        econtext->ecxt_scantuple = slot;
-
-        /*
-         * check that the current tuple satisfies the qual-clause
-         *
-         * check for non-nil qual here to avoid a function call to ExecQual()
-         * when the qual is nil ... saves only a few cycles, but they add up
-         * ...
-         */
-        if (!qual || ExecQual(qual, econtext, false))
+        if (pss->batch_status == PLC_BATCH_SCAN_FINISH)
         {
-            /*
-             * Found a satisfactory scan tuple.
-             */
-            if (projInfo)
+            for (int i=0;i<pss->batch_size;i++)
             {
-                /*
-                 * Form a projection tuple, store it in the result tuple slot
-                 * and return it.
-                 */
-                return ExecProject(projInfo, NULL);
+                ExecDropSingleTupleTableSlot(pss->batch[i]);
+            }
+
+            pss->batch_size = 0;
+            pss->cur_batch_scan_num = 0;
+            pss->batch_status = PLC_BATCH_UNSTART;
+            elog(NOTICE, "plcontainer scan, status:PLC_BATCH_SCAN_FINISH will to get next tuple batch");
+        }
+        else if (pss->batch_status == PLC_BATCH_SCAN_IN_PROCESS)
+        {
+            if (pss->batch_size == 0)
+            {
+                return NULL;
+            }
+
+            // batch ready, pop slot
+            slot = pss->batch[pss->cur_batch_scan_num]; 
+            pss->cur_batch_scan_num++;        
+            elog(NOTICE, "plcontainer scan, status:PLC_BATCH_SCAN_IN_PROCESS tuple:%d/%d", pss->cur_batch_scan_num, pss->batch_size);
+
+            econtext->ecxt_scantuple = slot;
+            if (!qual || ExecQual(qual, econtext, false))
+            {
+                if (projInfo)
+                {
+                    slot = ExecProject(projInfo, NULL);
+                    if (pss->cur_batch_scan_num == pss->batch_size)
+                    {
+                        pss->batch_status = PLC_BATCH_SCAN_FINISH;
+                    }
+                    elog(NOTICE, "plcontainer scan, status:PLC_BATCH_SCAN_IN_PROCESS scan:%d/%d", pss->cur_batch_scan_num, pss->batch_size);
+                    return slot;
+                }
+                else
+                {
+                    return slot;
+                }
             }
             else
+                InstrCountFiltered1(node, 1);
+
+            ResetExprContext(econtext);
+        } 
+        else if (pss->batch_status == PLC_BATCH_UNSTART)
+        {
+            elog(NOTICE, "plcontainer scan, status:PLC_BATCH_UNSTART");
+
+            int batch_tuple_num = 0;
+            for (;;) 
             {
-                /*
-                 * Here, we aren't projecting, so just return scan tuple.
-                 */
-                return slot;
+
+                CHECK_FOR_INTERRUPTS();
+
+                if (QueryFinishPending)
+                    return NULL;
+
+                slot = ExecScanFetch(node, accessMtd, recheckMtd);
+                if (TupIsNull(slot))
+                {
+                    if (projInfo) 
+                    {
+                        ExecClearTuple(projInfo->pi_slot);
+                    }
+                    pss->batch_size = batch_tuple_num;
+                    pss->batch_status = PLC_BATCH_FETCH_FINISH;
+                    pss->scanFinish = true;
+                    elog(NOTICE, "plcontainer scan, status:PLC_BATCH_FETCH_FINISH batch_size:%d", pss->batch_size);
+                    break;
+                }
+                else
+                { 
+                    pss->batch[batch_tuple_num] = MakeSingleTupleTableSlot(tupDesc);
+                    pss->batch[batch_tuple_num] = ExecCopySlot(pss->batch[batch_tuple_num], slot); 
+                    batch_tuple_num++;
+                    if (batch_tuple_num == PLC_BATCH_SIZE)
+                    {
+                        pss->batch_size = PLC_BATCH_SIZE;
+                        pss->batch_status = PLC_BATCH_FETCH_FINISH;
+                        elog(NOTICE, "plcontainer scan, status:PLC_BATCH_FETCH_FINISH batch_size:%d", pss->batch_size);
+                        break;
+                    }
+                }
             }
+            
+
+        } 
+        else if (pss->batch_status == PLC_BATCH_FETCH_FINISH) 
+        {
+            pss->cur_batch_scan_num = 0;
+            pss->batch_status = PLC_BATCH_SCAN_IN_PROCESS; 
         }
         else
-            InstrCountFiltered1(node, 1);
-
-        /*
-         * Tuple fails qual, so free per-tuple memory and try again.
-         */
-        ResetExprContext(econtext);
+        {
+            elog(ERROR, "error status for plcontainer scan");
+        }
     }
+
+    return slot;
 }
