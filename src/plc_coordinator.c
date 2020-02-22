@@ -817,7 +817,7 @@ static dsm_handle shm_message_queue_sender_init()
 
 	/* Create the shared memory segment and establish a table of contents. */
 	CurrentResourceOwner = ResourceOwnerCreate(NULL, "plcontainer coordinator");
-	seg = dsm_create(shm_toc_estimate(&e));
+	seg = dsm_create(shm_toc_estimate(&e), DSM_CREATE_NULL_IF_MAXSEGMENTS);
 	toc = shm_toc_create(PLC_COORDINATOR_MAGIC_NUMBER, dsm_segment_address(seg),
 						 segsize);
 

@@ -492,7 +492,7 @@ char* get_config_filename() {
 		plc_elog (ERROR, "PGDATA is not set");
 	snprintf(data_directory, sizeof(data_directory), "%s", env_str );
 #endif
-	sprintf(filename, "%s/%s", data_directory, PLC_PROPERTIES_FILE);
+	sprintf(filename, "%s/%s", GetConfigOption("data_directory", true, false), PLC_PROPERTIES_FILE);
 	return filename;
 }
 HTAB *load_runtime_configuration() {
@@ -678,7 +678,7 @@ containers_summary(pg_attribute_unused() PG_FUNCTION_ARGS) {
 				continue;
 			}
 			ownerStr = json_object_get_string(ownerObj);
-			username = GetUserNameFromId(GetUserId());
+			username = GetUserNameFromId(GetUserId(), true);
 			if (strcmp(ownerStr, username) != 0 && superuser() == false) {
 				plc_elog(DEBUG1, "Current username %s (not super user) is not match conatiner owner %s, skip", username, ownerStr);
 				continue;

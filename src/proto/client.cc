@@ -637,7 +637,7 @@ int get_new_container_from_coordinator(const char *runtime_id, plcContext *ctx) 
     PLCoordinatorClient     client(grpc::CreateChannel(
       "unix://"+server_addr, grpc::InsecureChannelCredentials()));
 
-    username = GetUserNameFromId(GetUserId());
+    username = GetUserNameFromId(GetUserId(), true);
     request.set_runtime_id(runtime_id);
     request.set_qe_pid(getpid());
     request.set_session_id(gp_session_id);
