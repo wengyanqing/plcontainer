@@ -8,8 +8,8 @@ SRCDIR = ../
 FILES = plcBatch.c nodePlcscan.c plcPlan.c execScan.c
 OBJS = $(foreach src,$(FILES),$(subst .c,.o,$(src)))
 
-CXX_FILES=../proto/client.cc ../proto/proto_utils.cc ../proto/plcontainer.pb.cc ../proto/plcontainer.grpc.pb.cc
-OBJS += $(foreach src,$(CXX_FILES),$(subst .cc,.o,$(src)))
+#CXX_FILES=../proto/client.cc ../proto/proto_utils.cc ../proto/plcontainer.pb.cc ../proto/plcontainer.grpc.pb.cc
+#OBJS += $(foreach src,$(CXX_FILES),$(subst .cc,.o,$(src)))
 
 override SHLIB_LINK += $(shell pkg-config --libs json-c)
 override SHLIB_LINK += $(shell xml2-config --libs)
@@ -33,7 +33,7 @@ endif
 
 INCLUDE_DIR = ../include
 override CFLAGS += -std=gnu99 -I$(INCLUDE_DIR) -I$(INCLUDE_DIR)/proto -Wall -Wextra -g3 -O0 -ggdb
-override CXXFLAGS += $(subst -fexcess-precision=standard,,$(subst -Wmissing-prototypes,,$(subst -std=gnu99,,$(CFLAGS)))) -I$(INCLUDE_DIR) -I$(INCLUDE_DIR)/proto
+override CXXFLAGS += $(subst -fexcess-precision=standard,,$(subst -Wmissing-prototypes,,$(subst -std=gnu99,,$(CFLAGS)))) -I$(INCLUDE_DIR) -I$(INCLUDE_DIR)/proto -I$(SRCDIR)
 
 PGXS := $(shell pg_config --pgxs)
 include $(PGXS)

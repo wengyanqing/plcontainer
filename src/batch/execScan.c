@@ -100,6 +100,8 @@ PlcExecScan(PlcScanState *pss,
 
     TupleDesc   tupDesc = RelationGetDescr(node->ss_currentRelation);
 
+    MemoryContext oldcontext;
+
     /*
      * If we have neither a qual to check nor a projection to do, just skip
      * all the overhead and return the raw scan tuple.
@@ -124,14 +126,9 @@ PlcExecScan(PlcScanState *pss,
 
     while(true)
     {
-        if (pss->batch_status == PLC_BATCH_SCAN_FINISH && pss->scanFinish)
-        {
-            elog(NOTICE, "plcontainer scan finish");
-            return NULL;
-        }
-
         if (pss->batch_status == PLC_BATCH_SCAN_FINISH)
         {
+
             for (int i=0;i<pss->batch_size;i++)
             {
                 ExecDropSingleTupleTableSlot(pss->batch[i]);
@@ -140,7 +137,18 @@ PlcExecScan(PlcScanState *pss,
             pss->batch_size = 0;
             pss->cur_batch_scan_num = 0;
             pss->batch_status = PLC_BATCH_UNSTART;
-            elog(NOTICE, "plcontainer scan, status:PLC_BATCH_SCAN_FINISH will to get next tuple batch");
+
+            if (pss->scanFinish)           
+            {
+                return NULL;
+            }
+            else
+            {
+                elog(LOG, "plcontainer scan, status:PLC_BATCH_SCAN_FINISH will to get next tuple batch");
+            } 
+
+
+
         }
         else if (pss->batch_status == PLC_BATCH_SCAN_IN_PROCESS)
         {
@@ -152,7 +160,7 @@ PlcExecScan(PlcScanState *pss,
             // batch ready, pop slot
             slot = pss->batch[pss->cur_batch_scan_num]; 
             pss->cur_batch_scan_num++;        
-            elog(NOTICE, "plcontainer scan, status:PLC_BATCH_SCAN_IN_PROCESS tuple:%d/%d", pss->cur_batch_scan_num, pss->batch_size);
+            elog(DEBUG3, "plcontainer scan, status:PLC_BATCH_SCAN_IN_PROCESS tuple:%d/%d", pss->cur_batch_scan_num, pss->batch_size);
 
             econtext->ecxt_scantuple = slot;
             if (!qual || ExecQual(qual, econtext, false))
@@ -164,7 +172,7 @@ PlcExecScan(PlcScanState *pss,
                     {
                         pss->batch_status = PLC_BATCH_SCAN_FINISH;
                     }
-                    elog(NOTICE, "plcontainer scan, status:PLC_BATCH_SCAN_IN_PROCESS scan:%d/%d", pss->cur_batch_scan_num, pss->batch_size);
+                    elog(DEBUG3, "plcontainer scan, status:PLC_BATCH_SCAN_IN_PROCESS scan:%d/%d", pss->cur_batch_scan_num, pss->batch_size);
                     return slot;
                 }
                 else
@@ -179,7 +187,7 @@ PlcExecScan(PlcScanState *pss,
         } 
         else if (pss->batch_status == PLC_BATCH_UNSTART)
         {
-            elog(NOTICE, "plcontainer scan, status:PLC_BATCH_UNSTART");
+//            elog(NOTICE, "plcontainer scan, status:PLC_BATCH_UNSTART batch_size:%d batch_num:%d", pss->batch_size, pss->batch_num++);
 
             int batch_tuple_num = 0;
             for (;;) 
@@ -200,19 +208,24 @@ PlcExecScan(PlcScanState *pss,
                     pss->batch_size = batch_tuple_num;
                     pss->batch_status = PLC_BATCH_FETCH_FINISH;
                     pss->scanFinish = true;
-                    elog(NOTICE, "plcontainer scan, status:PLC_BATCH_FETCH_FINISH batch_size:%d", pss->batch_size);
+                    elog(DEBUG3, "plcontainer scan, status:PLC_BATCH_FETCH_FINISH batch_size:%d", pss->batch_size);
                     break;
                 }
                 else
-                { 
+                {
+//                    oldcontext = MemoryContextSwitchTo(TopMemoryContext); 
                     pss->batch[batch_tuple_num] = MakeSingleTupleTableSlot(tupDesc);
+                    //pss->batch[batch_tuple_num] = ExecClearTuple(pss->batch[batch_tuple_num]);
                     pss->batch[batch_tuple_num] = ExecCopySlot(pss->batch[batch_tuple_num], slot); 
+
+ //                   MemoryContextSwitchTo(oldcontext);
+
                     batch_tuple_num++;
                     if (batch_tuple_num == PLC_BATCH_SIZE)
                     {
                         pss->batch_size = PLC_BATCH_SIZE;
                         pss->batch_status = PLC_BATCH_FETCH_FINISH;
-                        elog(NOTICE, "plcontainer scan, status:PLC_BATCH_FETCH_FINISH batch_size:%d", pss->batch_size);
+                        elog(DEBUG3, "plcontainer scan, status:PLC_BATCH_FETCH_FINISH batch_size:%d", pss->batch_size);
                         break;
                     }
                 }
@@ -222,6 +235,35 @@ PlcExecScan(PlcScanState *pss,
         } 
         else if (pss->batch_status == PLC_BATCH_FETCH_FINISH) 
         {
+            
+            // fire plcontainer function call for batch tuple
+            if (projInfo && projInfo->pi_targetlist) {
+                ListCell   *tl;
+                foreach(tl, projInfo->pi_targetlist)
+                {
+                    // plcontaienr function targetlist
+                    GenericExprState *gstate = (GenericExprState *) lfirst(tl);
+                    TargetEntry *tle = (TargetEntry *) gstate->xprstate.expr;
+                    AttrNumber  resind = tle->resno - 1;
+
+
+                    for (int i=0;i<pss->batch_size;i++) {
+                        slot = pss->batch[i];
+                        Datum * value = slot_get_values(slot);
+                        bool * isnull = slot_get_isnull(slot);                   
+                        ExprDoneCond *itemIsDone = projInfo->pi_itemIsDone; 
+                        ExecEvalExpr(gstate->arg,
+                                                      econtext,
+                                                      &isnull[resind],
+                                                      &itemIsDone[resind]);
+
+
+    
+                    }
+
+                }
+            } 
+
             pss->cur_batch_scan_num = 0;
             pss->batch_status = PLC_BATCH_SCAN_IN_PROCESS; 
         }

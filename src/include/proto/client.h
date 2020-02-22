@@ -28,8 +28,6 @@ extern "C"
 #include "plc/containers.h"
 #include "plc/plc_coordinator.h"
 #include "cdb/cdbvars.h"
-
-extern int plc_client_timeout;
 }
 
 using namespace plcontainer;

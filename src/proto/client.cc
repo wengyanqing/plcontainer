@@ -1,6 +1,10 @@
 #include "client.h"
 #include "proto_utils.h"
 
+#include "batch/nodePlcscan.h"
+
+int plc_client_timeout = -1;
+
 PLContainerClient *PLContainerClient::client = NULL; 
 
 PLContainerClient::PLContainerClient() {
@@ -18,7 +22,8 @@ PLContainerClient *PLContainerClient::GetPLContainerClient() {
 void PLContainerClient::Init(const plcContext *ctx) {
     this->ctx = ctx;
 
-    if (ctx->is_new_ctx) {
+    //if (ctx->is_new_ctx) {
+    if (true) {
         std::string uds(ctx->service_address);
         uds = "unix://" + uds;
         this->stub_ = PLContainer::NewStub(grpc::CreateChannel(uds, grpc::InsecureChannelCredentials()));
@@ -456,6 +461,18 @@ Datum plcontainer_function_handler(FunctionCallInfo fcinfo, plcProcInfo *proc, M
         // 1. initialize function handler context, both return set or not
         plc_elog(DEBUG1, "fcinfo->flinfo->fn_retset: %d", fcinfo->flinfo->fn_retset);
 
+        if (enable_plc_batch_mode) {
+            plc_elog(DEBUG3, "enable_plc_batch_mode is true. state: batch_status:%d batch_size:%d cur_batch_scan_num:%d", 
+                                g_PlcScanState->batch_status, 
+                                g_PlcScanState->batch_size, 
+                                g_PlcScanState->cur_batch_scan_num);
+
+
+
+        } else {
+            plc_elog(DEBUG3, "enable_plc_batch_mode is false");
+        }
+
         if (fcinfo->flinfo->fn_retset) {
             /* First Call setup */
             if (SRF_IS_FIRSTCALL())
@@ -484,6 +501,58 @@ Datum plcontainer_function_handler(FunctionCallInfo fcinfo, plcProcInfo *proc, M
         if (!fcinfo->flinfo->fn_retset || bFirstTimeCall) {
             runtime_id = parse_container_meta(proc->src);
             ctx = get_container_context(runtime_id);
+
+            if (enable_plc_batch_mode && g_PlcScanState->batch_status == PLC_BATCH_FETCH_FINISH) {
+                // just save the function args
+                ctx->batch_args[ctx->batch_args_num] =  0; // copy func args
+                ctx->batch_args_num++;               
+
+                if (ctx->batch_args_num == g_PlcScanState->batch_size) {
+                    // fire function call and save result into result array
+                    client = PLContainerClient::GetPLContainerClient();
+                    client->Init(ctx);
+                    client->InitCallRequest(fcinfo, proc, R, request);
+                    response = new CallResponse;
+                    response->set_result_rows(0);
+         
+                    plcContextBeginStage(ctx, "R_function_call", NULL);
+                    client->FunctionCall(request, *response);
+                    plcContextEndStage(ctx, "R_function_call",
+                            PLC_CONTEXT_STAGE_SUCCESS,
+                            "[REQUEST]:%s, [RESPONSE]:%s", request.DebugString().c_str(), response->DebugString().c_str());
+
+                    plcContextLogging(LOG, ctx);
+                    bFirstTimeCall = false;
+
+                    ctx->batch_result[0] = (void *)response;
+
+                }
+
+                plc_elog(DEBUG3, "plcontainer call with %d args", ctx->batch_args_num);
+
+                return Datum(0); 
+            }
+            else if (enable_plc_batch_mode && g_PlcScanState->batch_status == PLC_BATCH_SCAN_IN_PROCESS) {
+                // return cached result
+                plc_elog(DEBUG3, "plcontainer call with cached result %d/%d", g_PlcScanState->cur_batch_scan_num, g_PlcScanState->batch_size);
+                
+                response = (CallResponse *)ctx->batch_result[0];
+
+                datumreturn = client->GetCallResponseAsDatum(fcinfo, proc, *response);
+                response->set_result_rows(response->result_rows() + 1);
+                MemoryContextSwitchTo(oldcontext);
+                return datumreturn;
+            }
+
+
+
+
+
+
+
+
+
+
             /*
              * TODO will be reuse client channel if possible
              */

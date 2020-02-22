@@ -74,7 +74,7 @@ CoordinatorConstraint *coordinator_docker_constraint;
 bool plcontainer_stand_alone_mode = true;
 int plc_max_docker_creating_num = 3;
 char *plcontainer_stand_alone_server_path;
-int plc_client_timeout = -1;
+//int plc_client_timeout = -1;
 
 static int send_message(QeRequest *request);
 static int receive_message();

@@ -20,7 +20,7 @@
 
 PG_MODULE_MAGIC;
 
-static bool                 enable_plc_batch_mode;
+bool                 enable_plc_batch_mode;
 static planner_hook_type    planner_hook_next;
 
 static PlannedStmt *plc_batch_post_planner(Query *parse, int cursorOptions, ParamListInfo boundParams);

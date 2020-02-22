@@ -28,6 +28,8 @@ void plcContextInit(plcContext *ctx)
 	ctx->current_stage_num = 0;
 	ctx->max_stage_num = MAX_PLC_CONTEXT_STAGE_NUM;
 	ctx->is_new_ctx = true;
+
+    ctx->batch_args_num = 0;    
 	global_context = ctx;
 }
 

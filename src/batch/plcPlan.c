@@ -205,6 +205,17 @@ plan_tree_mutator(Node *node,
             return (Node *) newnode;
         }
 
+    case T_Agg:
+        {
+            Agg        *agg = (Agg *) node;
+            Agg        *newagg;
+
+            FLATCOPY(newagg, agg, Agg);
+            PLANMUTATE(newagg, agg);
+            COPYARRAY(newagg, agg, numCols, grpColIdx);
+            return (Node *) newagg;
+        }
+
     default:
         elog(ERROR, "node type %d:%s not supported", nodeTag(node), nodeToString(node));
 /* 

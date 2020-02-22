@@ -68,10 +68,10 @@ endif
 PLCONTAINERDIR = $(DESTDIR)$(datadir)/plcontainer
 INCLUDE_DIR = $(SRCDIR)/include
 
-override CFLAGS += -Werror -Wextra -Wall -Wno-sign-compare -I$(INCLUDE_DIR) -I$(INCLUDE_DIR)/proto
+override CFLAGS += -Werror -Wextra -Wall -Wno-sign-compare -I$(INCLUDE_DIR) -I$(INCLUDE_DIR)/proto -I$(SRCDIR)
 override CFLAGS += $(shell xml2-config --cflags)
 
-CXXFLAGS += $(subst -fexcess-precision=standard,,$(subst -Wmissing-prototypes,,$(subst -std=gnu99,,$(CFLAGS)))) -I$(INCLUDE_DIR) -I$(INCLUDE_DIR)/proto
+CXXFLAGS += $(subst -fexcess-precision=standard,,$(subst -Wmissing-prototypes,,$(subst -std=gnu99,,$(CFLAGS)))) -I$(INCLUDE_DIR) -I$(INCLUDE_DIR)/proto -I$(SRCDIR)
 
 override SHLIB_LINK += $(shell pkg-config --libs json-c)
 override SHLIB_LINK += $(shell xml2-config --libs)
