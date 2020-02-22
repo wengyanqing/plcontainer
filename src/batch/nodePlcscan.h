@@ -11,7 +11,8 @@ typedef enum PlcScanBatchStatus
     PLC_BATCH_UNSTART,
     PLC_BATCH_FETCH_FINISH,
     PLC_BATCH_SCAN_IN_PROCESS,
-    PLC_BATCH_SCAN_FINISH
+    PLC_BATCH_SCAN_FINISH,
+    PLC_SCAN_FINISH
 } PlcScanBatchStatus;
 
 typedef struct PlcScanState

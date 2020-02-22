@@ -136,14 +136,15 @@ PlcExecScan(PlcScanState *pss,
 
             pss->batch_size = 0;
             pss->cur_batch_scan_num = 0;
-            pss->batch_status = PLC_BATCH_UNSTART;
 
             if (pss->scanFinish)           
             {
+                pss->batch_status = PLC_SCAN_FINISH;
                 return NULL;
             }
             else
             {
+                pss->batch_status = PLC_BATCH_UNSTART;
                 elog(LOG, "plcontainer scan, status:PLC_BATCH_SCAN_FINISH will to get next tuple batch");
             } 
 

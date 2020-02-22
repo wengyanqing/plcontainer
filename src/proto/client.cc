@@ -537,7 +537,8 @@ Datum plcontainer_function_handler(FunctionCallInfo fcinfo, plcProcInfo *proc, M
                 plc_elog(DEBUG3, "plcontainer call with cached result %d/%d", g_PlcScanState->cur_batch_scan_num, g_PlcScanState->batch_size);
                 
                 response = (CallResponse *)ctx->batch_result[0];
-
+                ctx->batch_args_num--;
+    
                 datumreturn = client->GetCallResponseAsDatum(fcinfo, proc, *response);
                 response->set_result_rows(response->result_rows() + 1);
                 MemoryContextSwitchTo(oldcontext);
