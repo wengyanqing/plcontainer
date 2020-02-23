@@ -461,16 +461,25 @@ Datum plcontainer_function_handler(FunctionCallInfo fcinfo, plcProcInfo *proc, M
         // 1. initialize function handler context, both return set or not
         plc_elog(DEBUG1, "fcinfo->flinfo->fn_retset: %d", fcinfo->flinfo->fn_retset);
 
-        if (enable_plc_batch_mode) {
+        if (plc_client_timeout == 30)
+        {
+            return (Datum)0;
+        }
+
+
+        if (enable_plc_batch_mode && g_PlcScanState) {
             plc_elog(DEBUG3, "enable_plc_batch_mode is true. state: batch_status:%d batch_size:%d cur_batch_scan_num:%d", 
                                 g_PlcScanState->batch_status, 
                                 g_PlcScanState->batch_size, 
                                 g_PlcScanState->cur_batch_scan_num);
 
-
+        
+        } else if (enable_plc_batch_mode && g_PlcScanState == NULL) {
+            plc_elog(DEBUG3, "enable_plc_batch_mode is true, but not in scan");
 
         } else {
             plc_elog(DEBUG3, "enable_plc_batch_mode is false");
+
         }
 
         if (fcinfo->flinfo->fn_retset) {
@@ -502,7 +511,7 @@ Datum plcontainer_function_handler(FunctionCallInfo fcinfo, plcProcInfo *proc, M
             runtime_id = parse_container_meta(proc->src);
             ctx = get_container_context(runtime_id);
 
-            if (enable_plc_batch_mode && g_PlcScanState->batch_status == PLC_BATCH_FETCH_FINISH) {
+            if (enable_plc_batch_mode && g_PlcScanState && g_PlcScanState->batch_status == PLC_BATCH_FETCH_FINISH) {
                 // just save the function args
                 ctx->batch_args[ctx->batch_args_num] =  0; // copy func args
                 ctx->batch_args_num++;               
@@ -532,7 +541,7 @@ Datum plcontainer_function_handler(FunctionCallInfo fcinfo, plcProcInfo *proc, M
 
                 return Datum(0); 
             }
-            else if (enable_plc_batch_mode && g_PlcScanState->batch_status == PLC_BATCH_SCAN_IN_PROCESS) {
+            else if (enable_plc_batch_mode && g_PlcScanState && g_PlcScanState->batch_status == PLC_BATCH_SCAN_IN_PROCESS) {
                 // return cached result
                 plc_elog(DEBUG3, "plcontainer call with cached result %d/%d", g_PlcScanState->cur_batch_scan_num, g_PlcScanState->batch_size);
                 

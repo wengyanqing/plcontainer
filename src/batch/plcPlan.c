@@ -216,8 +216,12 @@ plan_tree_mutator(Node *node,
             return (Node *) newagg;
         }
 
+    case T_Aggref:
+//        return expression_tree_mutator(node, mutator, context);
+
     default:
-        elog(ERROR, "node type %d:%s not supported", nodeTag(node), nodeToString(node));
+        return expression_tree_mutator(node, mutator, context);
+        //elog(ERROR, "node type %d:%s not supported", nodeTag(node), nodeToString(node));
 /* 
     default:
         elog(ERROR, "node type %d:%s not supported", nodeTag(node), nodeToString(node));
