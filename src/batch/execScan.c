@@ -128,12 +128,6 @@ PlcExecScan(PlcScanState *pss,
     {
         if (pss->batch_status == PLC_BATCH_SCAN_FINISH)
         {
-
-            for (int i=0;i<pss->batch_size;i++)
-            {
-                ExecDropSingleTupleTableSlot(pss->batch[i]);
-            }
-
             pss->batch_size = 0;
             pss->cur_batch_scan_num = 0;
 
@@ -145,7 +139,7 @@ PlcExecScan(PlcScanState *pss,
             else
             {
                 pss->batch_status = PLC_BATCH_UNSTART;
-                elog(LOG, "plcontainer scan, status:PLC_BATCH_SCAN_FINISH will to get next tuple batch");
+                elog(DEBUG1, "plcontainer scan, status:PLC_BATCH_SCAN_FINISH will to get next tuple batch");
             } 
 
 
@@ -214,12 +208,7 @@ PlcExecScan(PlcScanState *pss,
                 }
                 else
                 {
-//                    oldcontext = MemoryContextSwitchTo(TopMemoryContext); 
-                    pss->batch[batch_tuple_num] = MakeSingleTupleTableSlot(tupDesc);
-                    //pss->batch[batch_tuple_num] = ExecClearTuple(pss->batch[batch_tuple_num]);
                     pss->batch[batch_tuple_num] = ExecCopySlot(pss->batch[batch_tuple_num], slot); 
-
- //                   MemoryContextSwitchTo(oldcontext);
 
                     batch_tuple_num++;
                     if (batch_tuple_num == PLC_BATCH_SIZE)
@@ -242,6 +231,7 @@ PlcExecScan(PlcScanState *pss,
                 ListCell   *tl;
                 foreach(tl, projInfo->pi_targetlist)
                 {
+                    // TODO only handle plcontainer function
                     // plcontaienr function targetlist
                     GenericExprState *gstate = (GenericExprState *) lfirst(tl);
                     TargetEntry *tle = (TargetEntry *) gstate->xprstate.expr;

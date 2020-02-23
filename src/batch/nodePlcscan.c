@@ -201,14 +201,14 @@ BeginPlcScan(CustomScanState *css, EState *estate, int eflags)
     pss->seqstate = ExecInitSeqScan(node, estate, eflags);
 
     pss->css.ss.ps.ps_ResultTupleSlot = pss->seqstate->ss.ps.ps_ResultTupleSlot;
-/*
+
     TupleDesc   tupDesc = RelationGetDescr(pss->seqstate->ss.ss_currentRelation);
 
     for (int i=0;i<PLC_BATCH_SIZE;i++)
     {
         pss->batch[i] = MakeSingleTupleTableSlot(tupDesc); 
     }
-*/
+
     g_PlcScanState = pss;
 }
 
@@ -256,12 +256,12 @@ EndPlcScan(CustomScanState *node)
     PlcScanState *pss = (PlcScanState*)node;
 
     g_PlcScanState = NULL;
-/*
-    for (int i=0;i<pss->batch_size;i++)
+
+    for (int i=0;i<PLC_BATCH_SIZE;i++)
     {
         ExecDropSingleTupleTableSlot(pss->batch[i]);
     }
-*/
+
     return ExecEndSeqScan(pss->seqstate);;
 }
 
