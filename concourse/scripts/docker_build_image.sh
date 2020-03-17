@@ -51,8 +51,10 @@ docker_build_ubuntu() {
 	scp -r plcontainer_src $node:~/
 	scp -r data-science-bundle $node:~/
 	if [[ $language = "python" ]]; then
+		DockerFolder="~/data-science-bundle/plcontainer_dockerfiles/python/"
 		echo "language python in pipeline." 
 	elif [[ $language = "r" ]]; then
+		DockerFolder="~/data-science-bundle/plcontainer_dockerfiles/r/"
 		echo "language R in pipeline." 
 	else
 		echo "Wrong language in pipeline." || exit 1
